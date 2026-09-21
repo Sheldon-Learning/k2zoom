@@ -1,9 +1,11 @@
-export type AppTheme = 'light' | 'dark' | 'sapphire'
+export type AppTheme = 'light' | 'dark' | 'sapphire' | 'black'
 
 const THEME_KEY = 'zoomet.theme'
 
 export function parseTheme(value: string | null): AppTheme {
-  return value === 'dark' || value === 'sapphire' ? value : 'light'
+  return value === 'dark' || value === 'sapphire' || value === 'black'
+    ? value
+    : 'light'
 }
 
 export function loadTheme(): AppTheme {

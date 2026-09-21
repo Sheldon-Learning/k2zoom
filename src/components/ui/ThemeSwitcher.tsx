@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Check, Gem, Moon, Palette, Sun } from 'lucide-react'
+import { Check, Circle, Gem, Moon, Palette, Sun } from 'lucide-react'
 import { useEditorStore } from '../../store/editorStore'
 import type { AppTheme } from '../../utils/theme'
 
 const choices = [
   { id: 'light', label: 'Clair', icon: Sun },
   { id: 'dark', label: 'Sombre', icon: Moon },
+  { id: 'black', label: 'Noir profond', icon: Circle },
   { id: 'sapphire', label: 'Bleu saphir', icon: Gem },
 ] as const
 

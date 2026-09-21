@@ -13,7 +13,7 @@ Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera t
 - Five visual image paths: timeline arrow, circle, four column mosaic, spiral, and zigzag
 - JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
 - Responsive editor and reduced motion support
-- Light, dark, and sapphire blue appearance modes, saved per browser
+- Light, dark, deep black, and sapphire blue appearance modes, saved per browser
 
 The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Images are stored in this browser as part of the presentation JSON, subject to browser storage limits. Export JSON to keep a portable backup. Caption editing, manual element editing, frame creation, path reordering, undo/redo, and collaboration are planned work.
 
@@ -58,7 +58,7 @@ The static build is written to `dist/`.
 
 Drag the canvas to pan. Use the wheel to zoom toward the cursor; horizontal trackpad scroll or Shift + wheel pans. Click a frame in the sidebar or bottom path to fly there. `0` shows the whole story, `+` and `-` zoom, `P` starts presenting. In presentation mode, use arrow keys or Space to navigate and Escape to exit. The on screen controls also work with touch.
 
-Use the palette button in the top bar to switch between light, dark, and sapphire blue. The canvas backdrop uses smooth gradients rather than a zoomed dot texture. The preference is local to your browser and is independent of the presentation JSON.
+Use the palette button in the top bar to switch between light, dark, deep black, and sapphire blue. The canvas backdrop uses smooth gradients rather than a zoomed dot texture; Deep Black uses a uniform black backdrop. The preference is local to your browser and is independent of the presentation JSON.
 
 ## GitHub Pages
 

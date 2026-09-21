@@ -6,6 +6,7 @@ describe('theme preference', () => {
     expect(parseTheme('light')).toBe('light')
     expect(parseTheme('dark')).toBe('dark')
     expect(parseTheme('sapphire')).toBe('sapphire')
+    expect(parseTheme('black')).toBe('black')
     expect(parseTheme('unknown')).toBe('light')
     expect(parseTheme(null)).toBe('light')
   })
