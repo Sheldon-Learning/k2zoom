@@ -208,6 +208,10 @@ input:focus-visible {
 .dropdown button:hover {
   background: #f2f7f5;
 }
+.dropdown button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
 .sidebar {
   grid-column: 1;
   grid-row: 2;

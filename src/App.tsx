@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Clapperboard,
   Download,
+  FileDown,
   LayoutTemplate,
   Maximize2,
   Images,
@@ -34,6 +35,7 @@ import { useEditorStore } from './store/editorStore'
 import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
 import { prepareImages } from './utils/images'
+import { createPresentationPdf } from './utils/pdfExport'
 import type {
   Presentation,
   PresentationStyle,
@@ -62,6 +64,7 @@ export default function App() {
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
+  const [pdfBusy, setPdfBusy] = useState(false)
 
   const controller = useMemo(
     () =>
@@ -412,6 +415,49 @@ export default function App() {
     setShowMenu(false)
   }
 
+  async function exportPDF() {
+    if (pdfBusy) return
+    setPdfBusy(true)
+    setShowMenu(false)
+    setMessage('Création du PDF…')
+    try {
+      const { blob, missingImages } = await createPresentationPdf(
+        presentation,
+        theme,
+        (completed, total) =>
+          setMessage(`Création du PDF… ${completed}/${total}`),
+      )
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${
+        presentation.title
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-') || 'presentation'
+      }.pdf`
+      document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      setMessage(
+        missingImages
+          ? `PDF téléchargé. ${missingImages} image${missingImages > 1 ? 's' : ''} indisponible${missingImages > 1 ? 's' : ''}.`
+          : 'PDF téléchargé',
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Impossible de créer le PDF : ${error.message}`
+          : 'Impossible de créer le PDF.',
+      )
+    } finally {
+      setPdfBusy(false)
+      window.setTimeout(() => setMessage(''), 6000)
+    }
+  }
+
   async function importJSON(file?: File) {
     if (!file) return
     try {
@@ -515,6 +561,9 @@ export default function App() {
               </button>
               {showMenu && (
                 <div className="dropdown">
+                  <button onClick={() => void exportPDF()} disabled={pdfBusy}>
+                    <FileDown size={16} /> Télécharger PDF
+                  </button>
                   <button onClick={exportJSON}>
                     <Download size={16} /> Export JSON
                   </button>

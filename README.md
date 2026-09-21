@@ -10,6 +10,7 @@ Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera t
 - Rotatable camera with frame focus and animated transitions
 - Presentation mode with fullscreen when available, keyboard and on screen navigation
 - Local autosave for the document title and JSON import/export
+- PDF download with one page per presentation step, including text, images, and clickable YouTube links
 - Eleven visual image paths: timeline arrow, circle, four column mosaic, spiral, zigzag, chevrons, numbered medallions, vertical steps, ribbons, milestones, and color spectrum
 - JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
 - YouTube links as video steps, playable inside the canvas in editor and presentation mode
@@ -64,6 +65,8 @@ Click the Zoomet logo to hide the top bar, sidebar, and presentation path and ex
 Use **Texte** in the top bar or **Modifier le texte** in the sidebar to rename the active step, add a text block, or edit its font, size, and position. Click an existing text block on the canvas to edit it directly. Changes are saved with the presentation in local storage and included in JSON exports.
 
 Drag a text block to place it anywhere on the canvas. Select it and drag the round handle to rotate it, or use the rotation slider in **Texte**. **Titre XXL** creates a large video-style heading with a dark outline. The editor also offers font sizes up to 240 px, colors, and shadow effects.
+
+Use **File → Télécharger PDF** to save the full presentation as a landscape PDF, one step per page. Videos appear as clickable YouTube links. If a remote image cannot be loaded by the browser, the PDF still downloads with a placeholder and reports how many images were unavailable.
 
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
 
