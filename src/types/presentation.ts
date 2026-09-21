@@ -46,7 +46,14 @@ export interface ImageElement extends BaseElement {
   alt: string
 }
 
-export type CanvasElement = TextElement | ShapeElement | ImageElement
+export interface VideoElement extends BaseElement {
+  type: 'video'
+  videoId: string
+  title: string
+}
+
+export type CanvasElement =
+  TextElement | ShapeElement | ImageElement | VideoElement
 
 export type PresentationStyle =
   'story' | 'timeline' | 'orbit' | 'grid' | 'spiral' | 'zigzag'

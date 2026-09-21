@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cameraForFrame,
-  cameraForImage,
+  cameraForMedia,
   panCamera,
   screenToWorld,
   worldToScreen,
@@ -77,7 +77,7 @@ describe('camera geometry', () => {
       rotation: 4,
     }
     const before = { x: 0, y: 0, zoom: 0.7, rotation: 0 }
-    const focused = cameraForImage(image, before, viewport)
+    const focused = cameraForMedia(image, before, viewport)
     expect(focused.zoom).toBeGreaterThan(before.zoom)
     expect(focused.rotation).toBe(-4)
     expect(

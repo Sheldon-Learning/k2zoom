@@ -13,13 +13,16 @@ import {
   Play,
   Sparkles,
   Upload,
+  Video,
   X,
 } from 'lucide-react'
 import { InfiniteCanvas } from './components/canvas/InfiniteCanvas'
 import { StylePicker } from './components/ui/StylePicker'
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
+import { VideoDialog } from './components/ui/VideoDialog'
 import { demoPresentation } from './data/demo'
 import {
+  appendMediaToStory,
   buildVisualPresentation,
   demoGallery,
   galleryFromPresentation,
@@ -29,7 +32,7 @@ import { useEditorStore } from './store/editorStore'
 import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
 import { prepareImages } from './utils/images'
-import type { PresentationStyle } from './types/presentation'
+import type { Presentation, PresentationStyle } from './types/presentation'
 
 export default function App() {
   const presentation = usePresentationStore((state) => state.presentation)
@@ -49,6 +52,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showStyles, setShowStyles] = useState(false)
+  const [showVideoDialog, setShowVideoDialog] = useState(false)
 
   const controller = useMemo(
     () =>
@@ -71,7 +75,10 @@ export default function App() {
   function chooseStyle(style: PresentationStyle) {
     if (
       style === 'story' &&
-      gallery.some((image) => !image.alt.startsWith('Paysage illustré')) &&
+      gallery.some(
+        (item) =>
+          item.kind === 'video' || !item.alt.startsWith('Paysage illustré'),
+      ) &&
       !window.confirm(
         'Revenir à la démo classique supprimera les images de cette présentation locale. Exportez le JSON pour les garder. Continuer ?',
       )
@@ -105,28 +112,43 @@ export default function App() {
     if (!files?.length) return
     try {
       const images = await prepareImages(Array.from(files))
-      const existing =
-        gallery.length &&
-        !gallery.every((item) => item.alt.startsWith('Paysage illustré'))
-          ? gallery
-          : []
-      const nextGallery = [...existing, ...images]
-      if (nextGallery.length > 24)
-        throw new Error('Limite de 24 images par présentation.')
-      const style =
+      const visualStyle =
         presentation.style && presentation.style !== 'story'
           ? presentation.style
-          : 'timeline'
-      const next = buildVisualPresentation(
-        style,
-        nextGallery,
-        presentation.title,
-      )
+          : null
+      const story = !visualStyle
+      let next: Presentation
+      if (story) {
+        if (gallery.length + images.length > 24)
+          throw new Error('Limite de 24 médias par présentation.')
+        next = appendMediaToStory(presentation, images)
+      } else {
+        const hasCustomImage = gallery.some(
+          (item) =>
+            item.kind === 'image' && !item.alt.startsWith('Paysage illustré'),
+        )
+        const existing = hasCustomImage
+          ? gallery
+          : gallery.filter((item) => item.kind === 'video')
+        const nextGallery = [...existing, ...images]
+        if (nextGallery.length > 24)
+          throw new Error('Limite de 24 médias par présentation.')
+        next = buildVisualPresentation(
+          visualStyle,
+          nextGallery,
+          presentation.title,
+        )
+      }
       if (JSON.stringify(next).length > 3_500_000)
         throw new Error('Stockage local plein : utilisez moins d’images.')
       replace(next)
-      setActiveFrame(0)
-      controller.fitToScreen(next.frames, 650)
+      if (story) {
+        setActiveFrame(presentation.path.length)
+        controller.focusOn(next.frames[presentation.frames.length], 650)
+      } else {
+        setActiveFrame(0)
+        controller.fitToScreen(next.frames, 650)
+      }
       setMessage(
         `${images.length} image${images.length > 1 ? 's' : ''} ajoutée${images.length > 1 ? 's' : ''}`,
       )
@@ -138,6 +160,35 @@ export default function App() {
           : 'Impossible de lire ces images.',
       )
     }
+    window.setTimeout(() => setMessage(''), 4000)
+  }
+
+  function addVideo(videoId: string, caption: string) {
+    if (gallery.length + 1 > 24) {
+      setMessage('Limite de 24 médias par présentation.')
+      window.setTimeout(() => setMessage(''), 4000)
+      return
+    }
+    const video = {
+      id: `youtube-${Date.now()}`,
+      kind: 'video' as const,
+      videoId,
+      alt: caption,
+      caption,
+    }
+    const next =
+      presentation.style && presentation.style !== 'story'
+        ? buildVisualPresentation(
+            presentation.style,
+            [...gallery, video],
+            presentation.title,
+          )
+        : appendMediaToStory(presentation, [video])
+    replace(next)
+    setActiveFrame(next.frames.length - 1)
+    controller.focusOn(next.frames.at(-1)!, 650)
+    setShowVideoDialog(false)
+    setMessage('Vidéo ajoutée au parcours')
     window.setTimeout(() => setMessage(''), 4000)
   }
 
@@ -287,6 +338,14 @@ export default function App() {
             >
               <Images size={16} /> Images
             </button>
+            <button
+              className="icon-button video-top-button"
+              aria-label="Ajouter une vidéo YouTube"
+              title="Ajouter une vidéo YouTube"
+              onClick={() => setShowVideoDialog(true)}
+            >
+              <Video size={19} />
+            </button>
             <ThemeSwitcher />
             <button
               className="icon-button help-button"
@@ -339,6 +398,12 @@ export default function App() {
               onClick={() => imageRef.current?.click()}
             >
               <Images size={18} /> Ajouter des images <ArrowRight size={14} />
+            </button>
+            <button
+              className="sidebar-item sidebar-action"
+              onClick={() => setShowVideoDialog(true)}
+            >
+              <Video size={18} /> Ajouter une vidéo <ArrowRight size={14} />
             </button>
             <div className="sidebar-separator" />
             <div className="sidebar-section-label">
@@ -415,8 +480,12 @@ export default function App() {
                     { '--preview-accent': frame.accent } as React.CSSProperties
                   }
                 >
-                  {gallery[index] ? (
+                  {gallery[index]?.kind === 'image' ? (
                     <img src={gallery[index].src} alt="" />
+                  ) : gallery[index]?.kind === 'video' ? (
+                    <span className="timeline-video-preview">
+                      <Play size={20} fill="currentColor" /> VIDÉO
+                    </span>
                   ) : (
                     <span>
                       {index === 0
@@ -516,6 +585,12 @@ export default function App() {
           onSelect={chooseStyle}
           onUpload={() => imageRef.current?.click()}
           onClose={() => setShowStyles(false)}
+        />
+      )}
+      {showVideoDialog && !presenting && (
+        <VideoDialog
+          onAdd={addVideo}
+          onClose={() => setShowVideoDialog(false)}
         />
       )}
       {message && (

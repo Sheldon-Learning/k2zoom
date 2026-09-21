@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
-import { Hand, Minus, Plus, Scan } from 'lucide-react'
+import { Hand, Minus, Play, Plus, Scan } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
 import type {
   Camera,
@@ -9,6 +9,7 @@ import type {
 } from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
 import { RouteOverlay } from './RouteOverlay'
+import { youtubeEmbedUrl } from '../../utils/youtube'
 
 interface Props {
   presentation: Presentation
@@ -30,6 +31,7 @@ export function InfiniteCanvas({
   )
   const imageClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [grabbing, setGrabbing] = useState(false)
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
 
   useEffect(
     () => () => {
@@ -43,6 +45,7 @@ export function InfiniteCanvas({
     if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
     imageClickTimer.current = null
     imageFocus.current = null
+    setPlayingVideoId(null)
   }, [activeFrame, presenting, presentation.frames])
 
   function focusImage(image: ImageElement) {
@@ -55,7 +58,7 @@ export function InfiniteCanvas({
       previousCamera:
         imageFocus.current?.previousCamera ?? useEditorStore.getState().camera,
     }
-    controller.focusOnImage(image)
+    controller.focusOnMedia(image)
   }
 
   function restoreImageView() {
@@ -160,7 +163,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : element.type === 'shape' ? `shape-${element.shape}` : 'image-element'}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
             role={element.type === 'image' ? 'button' : undefined}
             tabIndex={element.type === 'image' ? 0 : undefined}
             aria-label={
@@ -169,7 +172,7 @@ export function InfiniteCanvas({
                 : undefined
             }
             onPointerDown={
-              element.type === 'image'
+              element.type === 'image' || element.type === 'video'
                 ? (event) => event.stopPropagation()
                 : undefined
             }
@@ -225,6 +228,33 @@ export function InfiniteCanvas({
               element.text
             ) : element.type === 'image' ? (
               <img src={element.src} alt={element.alt} draggable={false} />
+            ) : element.type === 'video' ? (
+              playingVideoId === element.id ? (
+                <iframe
+                  title={element.title}
+                  src={youtubeEmbedUrl(element.videoId)}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              ) : (
+                <button
+                  className="video-poster"
+                  aria-label={`Lire la vidéo ${element.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    imageFocus.current = null
+                    controller.focusOnMedia(element)
+                    setPlayingVideoId(element.id)
+                  }}
+                >
+                  <span className="video-play-circle">
+                    <Play size={31} fill="currentColor" />
+                  </span>
+                  <span className="video-poster-title">{element.title}</span>
+                  <span className="video-poster-label">YOUTUBE · LIRE</span>
+                </button>
+              )
             ) : null}
           </div>
         ))}

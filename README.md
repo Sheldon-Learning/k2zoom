@@ -12,10 +12,11 @@ Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera t
 - Local autosave for the document title and JSON import/export
 - Five visual image paths: timeline arrow, circle, four column mosaic, spiral, and zigzag
 - JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
+- YouTube links as video steps, playable inside the canvas in editor and presentation mode
 - Responsive editor and reduced motion support
 - Light, dark, deep black, and sapphire blue appearance modes, saved per browser
 
-The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Images are stored in this browser as part of the presentation JSON, subject to browser storage limits. Export JSON to keep a portable backup. Caption editing, manual element editing, frame creation, path reordering, undo/redo, and collaboration are planned work.
+The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Use the video button to add a YouTube URL as another step. Images and video IDs are stored in this browser as part of the presentation JSON, subject to browser storage limits. The YouTube player loads only when clicked and uses YouTube's privacy enhanced embed domain. Export JSON to keep a portable backup. Caption editing, manual element editing, frame creation, path reordering, undo/redo, and collaboration are planned work.
 
 ## Stack and decisions
 
@@ -59,6 +60,8 @@ The static build is written to `dist/`.
 Drag the canvas to pan. Use the wheel to zoom toward the cursor; horizontal trackpad scroll or Shift + wheel pans. Click a frame in the sidebar or bottom path to fly there. `0` shows the whole story, `+` and `-` zoom, `P` starts presenting. In presentation mode, use arrow keys or Space to navigate and Escape to exit. The on screen controls also work with touch.
 
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
+
+Paste a YouTube watch, share, Shorts, or embed URL through **Ajouter une vidéo**. The new frame appears at the end of the current path, including the Classic story. Select it and press **Lire** on the video card to load the player. Playback is available in both editor and presentation mode; moving to another frame unloads the player. A video must permit embedding on third-party sites to play here.
 
 Use the palette button in the top bar to switch between light, dark, deep black, and sapphire blue. The canvas backdrop uses smooth gradients rather than a zoomed dot texture; Deep Black uses a uniform black backdrop. The preference is local to your browser and is independent of the presentation JSON.
 

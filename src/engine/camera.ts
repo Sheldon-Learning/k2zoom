@@ -1,4 +1,9 @@
-import type { Camera, Frame, ImageElement } from '../types/presentation'
+import type {
+  Camera,
+  Frame,
+  ImageElement,
+  VideoElement,
+} from '../types/presentation'
 
 export interface Point {
   x: number
@@ -86,8 +91,8 @@ export function cameraForFrame(frame: Frame, viewport: Size): Camera {
   }
 }
 
-export function cameraForImage(
-  image: ImageElement,
+export function cameraForMedia(
+  image: ImageElement | VideoElement,
   camera: Camera,
   viewport: Size,
 ): Camera {

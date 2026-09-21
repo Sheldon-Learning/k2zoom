@@ -14,6 +14,7 @@ export async function prepareImages(files: File[]): Promise<GalleryImage[]> {
   return Promise.all(
     files.map(async (file, index) => ({
       id: `upload-${Date.now()}-${index}`,
+      kind: 'image' as const,
       src: await resizeImage(file),
       alt: file.name,
       caption: file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),

@@ -4,14 +4,26 @@ import type {
   ImageElement,
   Presentation,
   PresentationStyle,
+  VideoElement,
 } from '../types/presentation'
 
 export interface GalleryImage {
   id: string
+  kind: 'image'
   src: string
   alt: string
   caption: string
 }
+
+export interface GalleryVideo {
+  id: string
+  kind: 'video'
+  videoId: string
+  alt: string
+  caption: string
+}
+
+export type GalleryMedia = GalleryImage | GalleryVideo
 
 export const visualStyles: {
   id: Exclude<PresentationStyle, 'story'>
@@ -76,6 +88,7 @@ function artwork(index: number): string {
 
 export const demoGallery: GalleryImage[] = titles.map((caption, index) => ({
   id: `demo-${index + 1}`,
+  kind: 'image',
   src: artwork(index),
   alt: `Paysage illustré ${index + 1}`,
   caption,
@@ -83,25 +96,44 @@ export const demoGallery: GalleryImage[] = titles.map((caption, index) => ({
 
 export function galleryFromPresentation(
   presentation: Presentation,
-): GalleryImage[] {
+): GalleryMedia[] {
   const images = presentation.elements.filter(
     (element): element is ImageElement => element.type === 'image',
   )
-  return presentation.path.flatMap((frameId) => {
+  const videos = presentation.elements.filter(
+    (element): element is VideoElement => element.type === 'video',
+  )
+  return presentation.path.flatMap<GalleryMedia>((frameId) => {
     const image = images.find((item) => item.id === `${frameId}-image`)
-    if (!image) return []
+    const video = videos.find((item) => item.id === `${frameId}-video`)
+    if (!image && !video) return []
     const caption = presentation.elements.find(
       (element) =>
         element.id === `${frameId}-caption` && element.type === 'text',
     )
-    return [
-      {
-        id: frameId,
-        src: image.src,
-        alt: image.alt,
-        caption: caption?.type === 'text' ? caption.text : image.alt,
-      },
-    ]
+    const label =
+      caption?.type === 'text'
+        ? caption.text
+        : (image?.alt ?? video?.title ?? 'Vidéo')
+    return image
+      ? [
+          {
+            id: frameId,
+            kind: 'image' as const,
+            src: image.src,
+            alt: image.alt,
+            caption: label,
+          },
+        ]
+      : [
+          {
+            id: frameId,
+            kind: 'video' as const,
+            videoId: video!.videoId,
+            alt: video!.title,
+            caption: label,
+          },
+        ]
   })
 }
 
@@ -149,19 +181,97 @@ function position(
   }
 }
 
+function mediaElements(
+  id: string,
+  media: GalleryMedia,
+  place: { x: number; y: number; rotation: number },
+): CanvasElement[] {
+  const card =
+    media.kind === 'image'
+      ? {
+          id: `${id}-image`,
+          type: 'image' as const,
+          src: media.src,
+          alt: media.alt,
+        }
+      : {
+          id: `${id}-video`,
+          type: 'video' as const,
+          videoId: media.videoId,
+          title: media.alt,
+        }
+  return [
+    {
+      ...card,
+      x: place.x + 22,
+      y: place.y + 22,
+      width: 396,
+      height: 235,
+      rotation: place.rotation,
+    },
+    {
+      id: `${id}-caption`,
+      type: 'text',
+      variant: 'body',
+      text: media.caption,
+      color: '#243e43',
+      x: place.x + 25,
+      y: place.y + 275,
+      width: 390,
+      height: 52,
+      rotation: place.rotation,
+    },
+  ]
+}
+
+export function appendMediaToStory(
+  presentation: Presentation,
+  media: GalleryMedia[],
+): Presentation {
+  if (!media.length) return presentation
+  const frames = [...presentation.frames]
+  const elements = [...presentation.elements]
+  const path = [...presentation.path]
+  const right = Math.max(0, ...frames.map((frame) => frame.x + frame.width))
+  const lastY = frames.at(-1)?.y ?? 0
+  media.forEach((item, index) => {
+    const id = `media-${item.id}`
+    const place = {
+      x: right + 220 + index * 560,
+      y: lastY + (index % 2 ? 60 : -60),
+      rotation: index % 2 ? 2 : -2,
+    }
+    frames.push({
+      id,
+      name: `${String(path.length + 1).padStart(2, '0')} · ${item.caption}`,
+      x: place.x,
+      y: place.y,
+      width: 440,
+      height: 340,
+      rotation: place.rotation,
+      cameraZoom: 1,
+      duration: 850,
+      accent: palette[(presentation.path.length + index) % palette.length][1],
+    })
+    elements.push(...mediaElements(id, item, place))
+    path.push(id)
+  })
+  return { ...presentation, frames, elements, path, style: 'story' }
+}
+
 export function buildVisualPresentation(
   style: Exclude<PresentationStyle, 'story'>,
-  gallery: GalleryImage[],
+  gallery: GalleryMedia[],
   title = 'Mon histoire visuelle',
 ): Presentation {
   const frames: Frame[] = []
   const elements: CanvasElement[] = []
-  gallery.forEach((image, index) => {
+  gallery.forEach((media, index) => {
     const place = position(style, index, gallery.length)
     const id = `visual-${index + 1}`
     frames.push({
       id,
-      name: `${String(index + 1).padStart(2, '0')} · ${image.caption}`,
+      name: `${String(index + 1).padStart(2, '0')} · ${media.caption}`,
       x: place.x,
       y: place.y,
       width: 440,
@@ -171,29 +281,7 @@ export function buildVisualPresentation(
       duration: 850,
       accent: palette[index % palette.length][1],
     })
-    elements.push({
-      id: `${id}-image`,
-      type: 'image',
-      src: image.src,
-      alt: image.alt,
-      x: place.x + 22,
-      y: place.y + 22,
-      width: 396,
-      height: 235,
-      rotation: place.rotation,
-    })
-    elements.push({
-      id: `${id}-caption`,
-      type: 'text',
-      variant: 'body',
-      text: image.caption,
-      color: '#243e43',
-      x: place.x + 25,
-      y: place.y + 275,
-      width: 390,
-      height: 52,
-      rotation: place.rotation,
-    })
+    elements.push(...mediaElements(id, media, place))
   })
   return {
     version: 1,

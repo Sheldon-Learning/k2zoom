@@ -44,7 +44,7 @@ export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
           <span>STUDIO / PARCOURS</span>
           <h2 id="styles-title">Choisissez votre mouvement.</h2>
           <p>
-            Les mêmes images racontent une histoire différente selon le chemin
+            Les mêmes médias racontent une histoire différente selon le chemin
             suivi par la caméra.
           </p>
         </div>

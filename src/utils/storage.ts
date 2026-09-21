@@ -73,9 +73,12 @@ export function parsePresentation(json: string): Presentation {
           : element.type === 'shape'
             ? ['circle', 'rect'].includes(String(element.shape)) &&
               typeof element.fill === 'string'
-            : element.type === 'image' &&
-              isImageSource(element.src) &&
-              typeof element.alt === 'string'),
+            : element.type === 'image'
+              ? isImageSource(element.src) && typeof element.alt === 'string'
+              : element.type === 'video' &&
+                typeof element.videoId === 'string' &&
+                /^[A-Za-z0-9_-]{11}$/.test(element.videoId) &&
+                typeof element.title === 'string'),
     )
   )
     throw new Error('Invalid elements')

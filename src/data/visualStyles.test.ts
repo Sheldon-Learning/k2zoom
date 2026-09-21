@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  appendMediaToStory,
   buildVisualPresentation,
   demoGallery,
   galleryFromPresentation,
 } from './visualStyles'
+import { demoPresentation } from './demo'
 
 describe('visual presentation layouts', () => {
   it('places a nine-image gallery in four columns over three rows', () => {
@@ -34,4 +36,46 @@ describe('visual presentation layouts', () => {
       ).toBe(demoGallery.length)
     },
   )
+
+  it('keeps video and image order when changing layout', () => {
+    const media = [
+      demoGallery[0],
+      {
+        id: 'film',
+        kind: 'video' as const,
+        videoId: 'M7lc1UVf-VE',
+        alt: 'Présentation vidéo',
+        caption: 'Présentation vidéo',
+      },
+      demoGallery[1],
+    ]
+    const presentation = buildVisualPresentation('orbit', media)
+    expect(
+      presentation.elements.filter((element) => element.type === 'video'),
+    ).toHaveLength(1)
+    expect(
+      galleryFromPresentation(presentation).map((item) => item.kind),
+    ).toEqual(['image', 'video', 'image'])
+  })
+
+  it('adds media after the classic story without removing its content', () => {
+    const video = {
+      id: 'clip',
+      kind: 'video' as const,
+      videoId: 'M7lc1UVf-VE',
+      alt: 'Clip',
+      caption: 'Clip',
+    }
+    const next = appendMediaToStory(demoPresentation, [demoGallery[0], video])
+    expect(next.elements.slice(0, demoPresentation.elements.length)).toEqual(
+      demoPresentation.elements,
+    )
+    expect(next.path.slice(0, demoPresentation.path.length)).toEqual(
+      demoPresentation.path,
+    )
+    expect(galleryFromPresentation(next).map((item) => item.kind)).toEqual([
+      'image',
+      'video',
+    ])
+  })
 })

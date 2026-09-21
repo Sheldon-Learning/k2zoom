@@ -24,4 +24,25 @@ describe('presentation JSON', () => {
     const gallery = buildVisualPresentation('orbit', demoGallery)
     expect(parsePresentation(JSON.stringify(gallery))).toEqual(gallery)
   })
+  it('accepts video elements with a validated YouTube ID', () => {
+    const presentation = buildVisualPresentation('timeline', [
+      {
+        id: 'film',
+        kind: 'video',
+        videoId: 'M7lc1UVf-VE',
+        alt: 'Film',
+        caption: 'Film',
+      },
+    ])
+    expect(parsePresentation(JSON.stringify(presentation))).toEqual(
+      presentation,
+    )
+    const bad = {
+      ...presentation,
+      elements: presentation.elements.map((element) =>
+        element.type === 'video' ? { ...element, videoId: 'bad' } : element,
+      ),
+    }
+    expect(() => parsePresentation(JSON.stringify(bad))).toThrow()
+  })
 })
