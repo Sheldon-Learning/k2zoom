@@ -1,6 +1,7 @@
-import type { Camera, Frame } from '../types/presentation'
+import type { Camera, Frame, ImageElement } from '../types/presentation'
 import {
   cameraForFrame,
+  cameraForImage,
   fitCamera,
   panCamera,
   zoomAt,
@@ -45,6 +46,15 @@ export class CameraController {
   }
   focusOn(frame: Frame, duration = 850): void {
     this.animate(cameraForFrame(frame, this.getViewport()), duration)
+  }
+  focusOnImage(image: ImageElement, duration = 550): void {
+    this.animate(
+      cameraForImage(image, this.getCamera(), this.getViewport()),
+      duration,
+    )
+  }
+  returnTo(camera: Camera, duration = 450): void {
+    this.animate(camera, duration)
   }
   fitToScreen(frames: Frame[], duration = 600): void {
     this.animate(fitCamera(frames, this.getViewport()), duration)

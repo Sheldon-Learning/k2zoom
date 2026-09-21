@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cameraForFrame,
+  cameraForImage,
   panCamera,
   screenToWorld,
   worldToScreen,
@@ -62,6 +63,30 @@ describe('camera geometry', () => {
       x: 500,
       y: 350,
     })
+  })
+  it('moves forward to center a clicked image', () => {
+    const image = {
+      id: 'photo',
+      type: 'image' as const,
+      src: './photo.png',
+      alt: 'Photo',
+      x: 320,
+      y: -100,
+      width: 400,
+      height: 250,
+      rotation: 4,
+    }
+    const before = { x: 0, y: 0, zoom: 0.7, rotation: 0 }
+    const focused = cameraForImage(image, before, viewport)
+    expect(focused.zoom).toBeGreaterThan(before.zoom)
+    expect(focused.rotation).toBe(-4)
+    expect(
+      worldToScreen(
+        { x: image.x + image.width / 2, y: image.y + image.height / 2 },
+        focused,
+        viewport,
+      ),
+    ).toEqual({ x: viewport.width / 2, y: viewport.height / 2 })
   })
 })
 

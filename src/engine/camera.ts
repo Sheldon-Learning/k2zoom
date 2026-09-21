@@ -1,4 +1,4 @@
-import type { Camera, Frame } from '../types/presentation'
+import type { Camera, Frame, ImageElement } from '../types/presentation'
 
 export interface Point {
   x: number
@@ -83,6 +83,23 @@ export function cameraForFrame(frame: Frame, viewport: Size): Camera {
     y: frame.y + frame.height / 2,
     zoom: clampZoom(fit * frame.cameraZoom),
     rotation: -frame.rotation,
+  }
+}
+
+export function cameraForImage(
+  image: ImageElement,
+  camera: Camera,
+  viewport: Size,
+): Camera {
+  const fit = Math.min(
+    viewport.width / (image.width + 120),
+    viewport.height / (image.height + 120),
+  )
+  return {
+    x: image.x + image.width / 2,
+    y: image.y + image.height / 2,
+    zoom: clampZoom(Math.max(camera.zoom * 1.25, fit * 0.92)),
+    rotation: -image.rotation,
   }
 }
 

@@ -424,6 +424,12 @@ input:focus-visible {
   overflow: hidden;
   border-radius: 13px;
   box-shadow: 0 10px 25px #223e4326;
+  pointer-events: auto;
+  cursor: zoom-in;
+}
+.image-element:focus-visible {
+  outline: 3px solid #8dc9e9;
+  outline-offset: 5px;
 }
 .image-element img {
   display: block;

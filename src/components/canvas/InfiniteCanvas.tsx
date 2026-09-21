@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
 import { Hand, Minus, Plus, Scan } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
-import type { Presentation } from '../../types/presentation'
+import type {
+  Camera,
+  ImageElement,
+  Presentation,
+} from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
 import { RouteOverlay } from './RouteOverlay'
 
@@ -19,10 +23,48 @@ export function InfiniteCanvas({
 }: Props) {
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
+  const activeFrame = useEditorStore((state) => state.activeFrame)
   const drag = useRef<{ x: number; y: number } | null>(null)
+  const imageFocus = useRef<{ imageId: string; previousCamera: Camera } | null>(
+    null,
+  )
+  const imageClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [grabbing, setGrabbing] = useState(false)
 
-  useEffect(() => () => controller.stop(), [controller])
+  useEffect(
+    () => () => {
+      if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
+      controller.stop()
+    },
+    [controller],
+  )
+
+  useEffect(() => {
+    if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
+    imageClickTimer.current = null
+    imageFocus.current = null
+  }, [activeFrame, presenting, presentation.frames])
+
+  function focusImage(image: ImageElement) {
+    if (imageFocus.current?.imageId === image.id) {
+      restoreImageView()
+      return
+    }
+    imageFocus.current = {
+      imageId: image.id,
+      previousCamera:
+        imageFocus.current?.previousCamera ?? useEditorStore.getState().camera,
+    }
+    controller.focusOnImage(image)
+  }
+
+  function restoreImageView() {
+    if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
+    imageClickTimer.current = null
+    if (!imageFocus.current) return
+    controller.returnTo(imageFocus.current.previousCamera)
+    imageFocus.current = null
+  }
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || presenting) return
@@ -119,6 +161,56 @@ export function InfiniteCanvas({
           <div
             key={element.id}
             className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : element.type === 'shape' ? `shape-${element.shape}` : 'image-element'}`}
+            role={element.type === 'image' ? 'button' : undefined}
+            tabIndex={element.type === 'image' ? 0 : undefined}
+            aria-label={
+              element.type === 'image'
+                ? `${element.alt}. Clic pour zoomer, double clic pour revenir.`
+                : undefined
+            }
+            onPointerDown={
+              element.type === 'image'
+                ? (event) => event.stopPropagation()
+                : undefined
+            }
+            onClick={
+              element.type === 'image'
+                ? (event) => {
+                    event.stopPropagation()
+                    if (event.detail !== 1) return
+                    if (imageClickTimer.current)
+                      clearTimeout(imageClickTimer.current)
+                    imageClickTimer.current = setTimeout(() => {
+                      focusImage(element)
+                      imageClickTimer.current = null
+                    }, 220)
+                  }
+                : undefined
+            }
+            onDoubleClick={
+              element.type === 'image'
+                ? (event) => {
+                    event.stopPropagation()
+                    restoreImageView()
+                  }
+                : undefined
+            }
+            onKeyDown={
+              element.type === 'image'
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      focusImage(element)
+                    }
+                    if (event.key === 'Backspace') {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      restoreImageView()
+                    }
+                  }
+                : undefined
+            }
             style={{
               left: element.x,
               top: element.y,
