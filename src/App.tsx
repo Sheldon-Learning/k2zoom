@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { InfiniteCanvas } from './components/canvas/InfiniteCanvas'
 import { StylePicker } from './components/ui/StylePicker'
+import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
 import { demoPresentation } from './data/demo'
 import {
   buildVisualPresentation,
@@ -37,6 +38,7 @@ export default function App() {
   const replace = usePresentationStore((state) => state.replace)
   const presenting = useEditorStore((state) => state.presenting)
   const activeFrame = useEditorStore((state) => state.activeFrame)
+  const theme = useEditorStore((state) => state.theme)
   const setPresenting = useEditorStore((state) => state.setPresenting)
   const setActiveFrame = useEditorStore((state) => state.setActiveFrame)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -239,7 +241,11 @@ export default function App() {
   }
 
   return (
-    <div className={`app ${presenting ? 'is-presenting' : ''}`} ref={rootRef}>
+    <div
+      className={`app ${presenting ? 'is-presenting' : ''}`}
+      data-theme={theme}
+      ref={rootRef}
+    >
       {!presenting && (
         <>
           <header className="topbar">
@@ -281,6 +287,7 @@ export default function App() {
             >
               <Images size={16} /> Images
             </button>
+            <ThemeSwitcher />
             <button
               className="icon-button help-button"
               aria-label="Aide"

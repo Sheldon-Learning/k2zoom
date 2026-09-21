@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
 import { Hand, Minus, Plus, Scan } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
-import type { Camera, Presentation } from '../../types/presentation'
+import type { Presentation } from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
 import { RouteOverlay } from './RouteOverlay'
 
@@ -77,7 +77,7 @@ export function InfiniteCanvas({
       onWheel={onWheel}
       aria-label="Canvas spatial. Glissez pour déplacer, utilisez la molette pour zoomer."
     >
-      <div className="canvas-grid" style={gridStyle(camera)} />
+      <div className="canvas-grid" />
       <div
         className="canvas-world"
         style={{
@@ -169,12 +169,4 @@ export function InfiniteCanvas({
       )}
     </div>
   )
-}
-
-function gridStyle(camera: Camera): React.CSSProperties {
-  const spacing = 40 * camera.zoom
-  return {
-    backgroundSize: `${spacing}px ${spacing}px`,
-    backgroundPosition: `calc(50% - ${camera.x * camera.zoom}px) calc(50% - ${camera.y * camera.zoom}px)`,
-  }
 }
