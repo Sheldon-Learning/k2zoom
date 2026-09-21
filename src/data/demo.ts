@@ -130,4 +130,5 @@ export const demoPresentation: Presentation = {
   elements,
   frames,
   path: frames.map((frame) => frame.id),
+  style: 'story',
 }

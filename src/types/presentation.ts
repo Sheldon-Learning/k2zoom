@@ -40,7 +40,16 @@ export interface ShapeElement extends BaseElement {
   fill: string
 }
 
-export type CanvasElement = TextElement | ShapeElement
+export interface ImageElement extends BaseElement {
+  type: 'image'
+  src: string
+  alt: string
+}
+
+export type CanvasElement = TextElement | ShapeElement | ImageElement
+
+export type PresentationStyle =
+  'story' | 'timeline' | 'orbit' | 'grid' | 'spiral' | 'zigzag'
 
 export interface Presentation {
   version: 1
@@ -48,4 +57,5 @@ export interface Presentation {
   elements: CanvasElement[]
   frames: Frame[]
   path: string[]
+  style?: PresentationStyle
 }

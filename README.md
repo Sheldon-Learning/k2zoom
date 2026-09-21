@@ -10,9 +10,11 @@ Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera t
 - Rotatable camera with frame focus and animated transitions
 - Presentation mode with fullscreen when available, keyboard and on screen navigation
 - Local autosave for the document title and JSON import/export
+- Five visual image paths: timeline arrow, circle, four column mosaic, spiral, and zigzag
+- JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
 - Responsive editor and reduced motion support
 
-The demo content and frames are currently fixed. Element editing, frame creation, path reordering, undo/redo, templates, and collaboration are planned work.
+The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Images are stored in this browser as part of the presentation JSON, subject to browser storage limits. Export JSON to keep a portable backup. Caption editing, manual element editing, frame creation, path reordering, undo/redo, and collaboration are planned work.
 
 ## Stack and decisions
 
@@ -27,7 +29,8 @@ src/
   store/                            Persistent document and transient editor state
   types/presentation.ts             Typed JSON document model
   utils/storage.ts                  Local storage and JSON validation
-  data/demo.ts                      First launch example
+  data/demo.ts                      Original first launch example
+  data/visualStyles.ts              Gallery layouts and sample illustrations
 ```
 
 ## Local development

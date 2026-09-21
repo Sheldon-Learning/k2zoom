@@ -17,6 +17,14 @@ export function parsePresentation(json: string): Presentation {
   ) {
     throw new Error('Unsupported presentation format')
   }
+  if (
+    value.style !== undefined &&
+    !['story', 'timeline', 'orbit', 'grid', 'spiral', 'zigzag'].includes(
+      value.style,
+    )
+  ) {
+    throw new Error('Invalid presentation style')
+  }
   const isNumber = (number: unknown): number is number =>
     typeof number === 'number' && Number.isFinite(number)
   const isBox = (item: Record<string, unknown>) =>
@@ -30,6 +38,12 @@ export function parsePresentation(json: string): Presentation {
     isNumber(item.rotation)
   const isRecord = (item: unknown): item is Record<string, unknown> =>
     item !== null && typeof item === 'object'
+  const isImageSource = (source: unknown) =>
+    typeof source === 'string' &&
+    (/^data:image\/(jpeg|png|webp|svg\+xml)[;,]/.test(source) ||
+      /^https:\/\//.test(source) ||
+      source.startsWith('./') ||
+      source.startsWith('/'))
   if (
     !value.frames.every(
       (frame) =>
@@ -56,9 +70,12 @@ export function parsePresentation(json: string): Presentation {
               String(element.variant),
             ) &&
             typeof element.color === 'string'
-          : element.type === 'shape' &&
-            ['circle', 'rect'].includes(String(element.shape)) &&
-            typeof element.fill === 'string'),
+          : element.type === 'shape'
+            ? ['circle', 'rect'].includes(String(element.shape)) &&
+              typeof element.fill === 'string'
+            : element.type === 'image' &&
+              isImageSource(element.src) &&
+              typeof element.alt === 'string'),
     )
   )
     throw new Error('Invalid elements')

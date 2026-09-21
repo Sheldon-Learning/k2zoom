@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { demoPresentation } from '../data/demo'
+import { buildVisualPresentation, demoGallery } from '../data/visualStyles'
 import { parsePresentation } from './storage'
 
 describe('presentation JSON', () => {
@@ -18,5 +19,9 @@ describe('presentation JSON', () => {
         JSON.stringify({ ...demoPresentation, frames: [{ id: 'broken' }] }),
       ),
     ).toThrow()
+  })
+  it('accepts a visual gallery with embedded image data', () => {
+    const gallery = buildVisualPresentation('orbit', demoGallery)
+    expect(parsePresentation(JSON.stringify(gallery))).toEqual(gallery)
   })
 })

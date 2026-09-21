@@ -4,6 +4,7 @@ import { Hand, Minus, Plus, Scan } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
 import type { Camera, Presentation } from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
+import { RouteOverlay } from './RouteOverlay'
 
 interface Props {
   presentation: Presentation
@@ -67,7 +68,7 @@ export function InfiniteCanvas({
 
   return (
     <div
-      className={`canvas-viewport ${grabbing ? 'is-grabbing' : ''}`}
+      className={`canvas-viewport style-${presentation.style ?? 'story'} ${grabbing ? 'is-grabbing' : ''}`}
       ref={viewportRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -83,7 +84,14 @@ export function InfiniteCanvas({
           transform: `translate3d(50%, 50%, 0) rotate(${camera.rotation}deg) scale(${camera.zoom}) translate3d(${-camera.x}px, ${-camera.y}px, 0)`,
         }}
       >
-        <div className="world-connector" />
+        {presentation.style && presentation.style !== 'story' ? (
+          <RouteOverlay
+            frames={presentation.frames}
+            style={presentation.style}
+          />
+        ) : (
+          <div className="world-connector" />
+        )}
         {presentation.frames.map((frame, index) => (
           <div
             className="canvas-frame"
@@ -110,7 +118,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : `shape-${element.shape}`}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : element.type === 'shape' ? `shape-${element.shape}` : 'image-element'}`}
             style={{
               left: element.x,
               top: element.y,
@@ -121,7 +129,11 @@ export function InfiniteCanvas({
               background: element.type === 'shape' ? element.fill : undefined,
             }}
           >
-            {element.type === 'text' ? element.text : null}
+            {element.type === 'text' ? (
+              element.text
+            ) : element.type === 'image' ? (
+              <img src={element.src} alt={element.alt} draggable={false} />
+            ) : null}
           </div>
         ))}
       </div>

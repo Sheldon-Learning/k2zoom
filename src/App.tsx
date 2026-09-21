@@ -9,16 +9,26 @@ import {
   Download,
   LayoutTemplate,
   Maximize2,
+  Images,
   Play,
   Sparkles,
   Upload,
   X,
 } from 'lucide-react'
 import { InfiniteCanvas } from './components/canvas/InfiniteCanvas'
+import { StylePicker } from './components/ui/StylePicker'
+import { demoPresentation } from './data/demo'
+import {
+  buildVisualPresentation,
+  demoGallery,
+  galleryFromPresentation,
+} from './data/visualStyles'
 import { CameraController } from './engine/CameraController'
 import { useEditorStore } from './store/editorStore'
 import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
+import { prepareImages } from './utils/images'
+import type { PresentationStyle } from './types/presentation'
 
 export default function App() {
   const presentation = usePresentationStore((state) => state.presentation)
@@ -32,9 +42,11 @@ export default function App() {
   const viewportRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const imageRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
   const [showHelp, setShowHelp] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showStyles, setShowStyles] = useState(false)
 
   const controller = useMemo(
     () =>
@@ -52,6 +64,80 @@ export default function App() {
   const pathFrames = presentation.path
     .map((id) => presentation.frames.find((frame) => frame.id === id))
     .filter((frame) => frame !== undefined)
+  const gallery = galleryFromPresentation(presentation)
+
+  function chooseStyle(style: PresentationStyle) {
+    if (
+      style === 'story' &&
+      gallery.some((image) => !image.alt.startsWith('Paysage illustré')) &&
+      !window.confirm(
+        'Revenir à la démo classique supprimera les images de cette présentation locale. Exportez le JSON pour les garder. Continuer ?',
+      )
+    )
+      return
+    if (
+      presentation.style === 'story' &&
+      style !== 'story' &&
+      JSON.stringify(presentation.elements) !==
+        JSON.stringify(demoPresentation.elements) &&
+      !window.confirm(
+        'Ce style remplacera le contenu actuel par une galerie d’exemple. Exportez le JSON pour le garder. Continuer ?',
+      )
+    )
+      return
+    const next =
+      style === 'story'
+        ? { ...demoPresentation, title: presentation.title }
+        : buildVisualPresentation(
+            style,
+            gallery.length ? gallery : demoGallery,
+            presentation.title,
+          )
+    replace(next)
+    setActiveFrame(0)
+    controller.fitToScreen(next.frames, 650)
+    setShowStyles(false)
+  }
+
+  async function addImages(files?: FileList | null) {
+    if (!files?.length) return
+    try {
+      const images = await prepareImages(Array.from(files))
+      const existing =
+        gallery.length &&
+        !gallery.every((item) => item.alt.startsWith('Paysage illustré'))
+          ? gallery
+          : []
+      const nextGallery = [...existing, ...images]
+      if (nextGallery.length > 24)
+        throw new Error('Limite de 24 images par présentation.')
+      const style =
+        presentation.style && presentation.style !== 'story'
+          ? presentation.style
+          : 'timeline'
+      const next = buildVisualPresentation(
+        style,
+        nextGallery,
+        presentation.title,
+      )
+      if (JSON.stringify(next).length > 3_500_000)
+        throw new Error('Stockage local plein : utilisez moins d’images.')
+      replace(next)
+      setActiveFrame(0)
+      controller.fitToScreen(next.frames, 650)
+      setMessage(
+        `${images.length} image${images.length > 1 ? 's' : ''} ajoutée${images.length > 1 ? 's' : ''}`,
+      )
+      setShowStyles(false)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Impossible de lire ces images.',
+      )
+    }
+    window.setTimeout(() => setMessage(''), 4000)
+  }
 
   function focus(index: number) {
     const frame = pathFrames[index]
@@ -184,6 +270,18 @@ export default function App() {
             </span>
             <div className="topbar-spacer" />
             <button
+              className="button button-light styles-top-button"
+              onClick={() => setShowStyles(true)}
+            >
+              <LayoutTemplate size={16} /> Styles
+            </button>
+            <button
+              className="button button-light images-top-button"
+              onClick={() => imageRef.current?.click()}
+            >
+              <Images size={16} /> Images
+            </button>
+            <button
               className="icon-button help-button"
               aria-label="Aide"
               onClick={() => setShowHelp(true)}
@@ -222,6 +320,19 @@ export default function App() {
               <LayoutTemplate size={18} /> Canvas{' '}
               <span className="sidebar-indicator" />
             </div>
+            <button
+              className="sidebar-item sidebar-action"
+              onClick={() => setShowStyles(true)}
+            >
+              <LayoutTemplate size={18} /> Styles de parcours{' '}
+              <ArrowRight size={14} />
+            </button>
+            <button
+              className="sidebar-item sidebar-action"
+              onClick={() => imageRef.current?.click()}
+            >
+              <Images size={18} /> Ajouter des images <ArrowRight size={14} />
+            </button>
             <div className="sidebar-separator" />
             <div className="sidebar-section-label">
               YOUR STORY <span>{pathFrames.length}</span>
@@ -297,11 +408,15 @@ export default function App() {
                     { '--preview-accent': frame.accent } as React.CSSProperties
                   }
                 >
-                  <span>
-                    {index === 0
-                      ? 'Ideas deserve more space.'
-                      : 'Think beyond the slide.'}
-                  </span>
+                  {gallery[index] ? (
+                    <img src={gallery[index].src} alt="" />
+                  ) : (
+                    <span>
+                      {index === 0
+                        ? 'Ideas deserve more space.'
+                        : 'Think beyond the slide.'}
+                    </span>
+                  )}
                 </span>
                 <span className="timeline-name">
                   {frame.name.split('·').at(-1)?.trim()}
@@ -388,6 +503,14 @@ export default function App() {
           </div>
         </div>
       )}
+      {showStyles && !presenting && (
+        <StylePicker
+          selected={presentation.style ?? 'story'}
+          onSelect={chooseStyle}
+          onUpload={() => imageRef.current?.click()}
+          onClose={() => setShowStyles(false)}
+        />
+      )}
       {message && (
         <div className="toast" role="status">
           {message}
@@ -400,6 +523,17 @@ export default function App() {
         hidden
         onChange={(event) => {
           void importJSON(event.target.files?.[0])
+          event.target.value = ''
+        }}
+      />
+      <input
+        ref={imageRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        hidden
+        onChange={(event) => {
+          void addImages(event.target.files)
           event.target.value = ''
         }}
       />
