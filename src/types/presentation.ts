@@ -58,7 +58,18 @@ export type CanvasElement =
   TextElement | ShapeElement | ImageElement | VideoElement
 
 export type PresentationStyle =
-  'story' | 'timeline' | 'orbit' | 'grid' | 'spiral' | 'zigzag'
+  | 'story'
+  | 'timeline'
+  | 'orbit'
+  | 'grid'
+  | 'spiral'
+  | 'zigzag'
+  | 'chevrons'
+  | 'medallions'
+  | 'steps'
+  | 'ribbons'
+  | 'milestones'
+  | 'spectrum'
 
 export interface Presentation {
   version: 1

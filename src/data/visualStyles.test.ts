@@ -38,6 +38,27 @@ describe('visual presentation layouts', () => {
     },
   )
 
+  it.each([
+    'chevrons',
+    'medallions',
+    'steps',
+    'ribbons',
+    'milestones',
+    'spectrum',
+  ] as const)('builds a distinct eight-step %s infographic', (style) => {
+    const presentation = buildVisualPresentation(style, demoGallery)
+    expect(presentation.frames).toHaveLength(8)
+    expect(presentation.path).toEqual(
+      presentation.frames.map((frame) => frame.id),
+    )
+    expect(
+      new Set(presentation.frames.map((frame) => `${frame.x},${frame.y}`)).size,
+    ).toBe(8)
+    expect(
+      galleryFromPresentation(presentation).map((item) => item.caption),
+    ).toEqual(demoGallery.map((item) => item.caption))
+  })
+
   it('keeps video and image order when changing layout', () => {
     const media = [
       demoGallery[0],

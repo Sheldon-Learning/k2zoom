@@ -10,13 +10,13 @@ Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera t
 - Rotatable camera with frame focus and animated transitions
 - Presentation mode with fullscreen when available, keyboard and on screen navigation
 - Local autosave for the document title and JSON import/export
-- Five visual image paths: timeline arrow, circle, four column mosaic, spiral, and zigzag
+- Eleven visual image paths: timeline arrow, circle, four column mosaic, spiral, zigzag, chevrons, numbered medallions, vertical steps, ribbons, milestones, and color spectrum
 - JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
 - YouTube links as video steps, playable inside the canvas in editor and presentation mode
 - Responsive editor and reduced motion support
 - Light, dark, deep black, and sapphire blue appearance modes, saved per browser
 
-The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Use the video button to add a YouTube URL as another step. Images and video IDs are stored in this browser as part of the presentation JSON, subject to browser storage limits. The YouTube player loads only when clicked and uses YouTube's privacy enhanced embed domain. Export JSON to keep a portable backup. Caption editing, manual element editing, frame creation, path reordering, undo/redo, and collaboration are planned work.
+The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Use the video button to add a YouTube URL as another step. Images and video IDs are stored in this browser as part of the presentation JSON, subject to browser storage limits. The YouTube player loads only when clicked and uses YouTube's privacy enhanced embed domain. Export JSON to keep a portable backup. Frame creation, path reordering, undo/redo, and collaboration are planned work.
 
 ## Stack and decisions
 

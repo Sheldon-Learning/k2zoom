@@ -56,6 +56,36 @@ export const visualStyles: {
     name: 'Zigzag',
     description: 'Un parcours vertical dynamique.',
   },
+  {
+    id: 'chevrons',
+    name: 'Chevrons',
+    description: 'Flèches colorées et étapes alternées.',
+  },
+  {
+    id: 'medallions',
+    name: 'Médaillons',
+    description: 'Repères ronds numérotés sur une ligne.',
+  },
+  {
+    id: 'steps',
+    name: 'Étapes verticales',
+    description: 'Une progression guidée de haut en bas.',
+  },
+  {
+    id: 'ribbons',
+    name: 'Rubans',
+    description: 'Des bandeaux successifs pour chaque idée.',
+  },
+  {
+    id: 'milestones',
+    name: 'Jalons',
+    description: 'Une frise ponctuée de grands repères.',
+  },
+  {
+    id: 'spectrum',
+    name: 'Spectre',
+    description: 'Une ligne fine aux couleurs évolutives.',
+  },
 ]
 
 const palette = [
@@ -179,6 +209,27 @@ function position(
         y: (index - (count - 1) / 2) * 405,
         rotation: index % 2 ? 2 : -2,
       }
+    case 'chevrons':
+    case 'medallions':
+      return {
+        x: (index - (count - 1) / 2) * 560 - 220,
+        y: index % 2 ? 180 : -520,
+        rotation: 0,
+      }
+    case 'steps':
+      return {
+        x: index % 2 ? 310 : -750,
+        y: (index - (count - 1) / 2) * 500 - 170,
+        rotation: 0,
+      }
+    case 'ribbons':
+    case 'milestones':
+    case 'spectrum':
+      return {
+        x: (index - (count - 1) / 2) * 560 - 220,
+        y: 100,
+        rotation: 0,
+      }
   }
 }
 
@@ -279,7 +330,18 @@ export function buildVisualPresentation(
       width: 440,
       height: 340,
       rotation: place.rotation,
-      cameraZoom: 1,
+      cameraZoom:
+        style === 'steps'
+          ? 0.5
+          : [
+                'chevrons',
+                'medallions',
+                'ribbons',
+                'milestones',
+                'spectrum',
+              ].includes(style)
+            ? 0.55
+            : 1,
       duration: 850,
       accent: palette[index % palette.length][1],
     })

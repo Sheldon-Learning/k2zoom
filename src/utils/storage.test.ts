@@ -24,6 +24,19 @@ describe('presentation JSON', () => {
     const gallery = buildVisualPresentation('orbit', demoGallery)
     expect(parsePresentation(JSON.stringify(gallery))).toEqual(gallery)
   })
+  it.each([
+    'chevrons',
+    'medallions',
+    'steps',
+    'ribbons',
+    'milestones',
+    'spectrum',
+  ] as const)('round trips the %s infographic style', (style) => {
+    const presentation = buildVisualPresentation(style, demoGallery.slice(0, 3))
+    expect(parsePresentation(JSON.stringify(presentation))).toEqual(
+      presentation,
+    )
+  })
   it('accepts video elements with a validated YouTube ID', () => {
     const presentation = buildVisualPresentation('timeline', [
       {

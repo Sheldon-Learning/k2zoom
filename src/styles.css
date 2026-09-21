@@ -547,6 +547,23 @@ input:focus-visible {
 .is-presenting .route-overlay {
   opacity: 0.28;
 }
+.is-presenting .route-infographic {
+  opacity: 0.68;
+}
+.route-infographic {
+  opacity: 0.94;
+}
+.canvas-viewport:is(
+    .style-chevrons,
+    .style-medallions,
+    .style-steps,
+    .style-ribbons,
+    .style-milestones,
+    .style-spectrum
+  )
+  .canvas-frame {
+  border-radius: 16px;
+}
 .text-eyebrow {
   font-family: Manrope, sans-serif;
   font-size: 15px;
@@ -1142,6 +1159,18 @@ input:focus-visible {
   color: #81928b;
   font-size: 13px;
 }
+.style-group + .style-group {
+  margin-top: 24px;
+}
+.style-group h3 {
+  margin: 0 0 11px;
+  color: var(--muted, #617b7a);
+  font-family: Manrope, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
 .style-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1200,6 +1229,24 @@ input:focus-visible {
 .style-art-zigzag {
   background: #f4edf7;
   color: #a47bb5;
+}
+.style-art-chevrons {
+  background: #eaf2fb;
+}
+.style-art-medallions {
+  background: #f1f7fc;
+}
+.style-art-steps {
+  background: #eaf7f7;
+}
+.style-art-ribbons {
+  background: #ecf0fb;
+}
+.style-art-milestones {
+  background: #f7f4ec;
+}
+.style-art-spectrum {
+  background: #f5f2f8;
 }
 .style-card-name {
   display: flex;

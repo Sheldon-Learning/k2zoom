@@ -19,9 +19,20 @@ export function parsePresentation(json: string): Presentation {
   }
   if (
     value.style !== undefined &&
-    !['story', 'timeline', 'orbit', 'grid', 'spiral', 'zigzag'].includes(
-      value.style,
-    )
+    ![
+      'story',
+      'timeline',
+      'orbit',
+      'grid',
+      'spiral',
+      'zigzag',
+      'chevrons',
+      'medallions',
+      'steps',
+      'ribbons',
+      'milestones',
+      'spectrum',
+    ].includes(value.style)
   ) {
     throw new Error('Invalid presentation style')
   }
