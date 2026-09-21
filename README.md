@@ -72,6 +72,8 @@ Use **File → Télécharger PDF** to save the full presentation as a landscape 
 
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
 
+Copy an image from another app and press Ctrl+V while the canvas is active to paste it at the center of the current view. You can also select an image in Zoomet, press Ctrl+C, then Ctrl+V to duplicate it. Supported formats are JPG, PNG, and WebP. Drag an image in edit mode to move it, then drag its round handle to rotate it. These changes are saved locally and included in PDF and JSON exports.
+
 Paste a YouTube watch, share, Shorts, or embed URL through **Ajouter une vidéo**. The new frame appears at the end of the current path, including the Classic story. Select it and press **Lire** on the video card to load the player. Playback is available in both editor and presentation mode; moving to another frame unloads the player. A video must permit embedding on third-party sites to play here.
 
 Use the palette button in the top bar to switch between light, dark, deep black, and sapphire blue. The canvas backdrop uses smooth gradients rather than a zoomed dot texture; Deep Black uses a uniform black backdrop. The preference is local to your browser and is independent of the presentation JSON.

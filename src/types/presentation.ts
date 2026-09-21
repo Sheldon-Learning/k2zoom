@@ -54,6 +54,7 @@ export interface ShapeElement extends BaseElement {
 
 export interface ImageElement extends BaseElement {
   type: 'image'
+  frameId?: string
   src: string
   alt: string
 }

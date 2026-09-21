@@ -53,4 +53,36 @@ describe('PDF frame content', () => {
       ),
     ).not.toContain('custom-title')
   })
+
+  it('exports pasted images with their assigned step after moving them', () => {
+    const presentation: Presentation = {
+      ...demoPresentation,
+      elements: [
+        ...demoPresentation.elements,
+        {
+          id: 'pasted-image-test',
+          type: 'image',
+          frameId: 'intro',
+          src: 'data:image/png;base64,AA==',
+          alt: 'Image collée',
+          x: 4000,
+          y: 4000,
+          width: 200,
+          height: 100,
+          rotation: 45,
+        },
+      ],
+    }
+
+    expect(
+      elementsForPdfFrame(presentation, presentation.frames[0]).map(
+        (element) => element.id,
+      ),
+    ).toContain('pasted-image-test')
+    expect(
+      elementsForPdfFrame(presentation, presentation.frames[1]).map(
+        (element) => element.id,
+      ),
+    ).not.toContain('pasted-image-test')
+  })
 })

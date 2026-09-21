@@ -21,9 +21,12 @@ interface Props {
   controller: CameraController
   viewportRef: React.RefObject<HTMLDivElement | null>
   selectedTextId?: string | null
+  selectedImageId?: string | null
   onSelectText?: (element: TextElement) => void
   onUpdateText?: (id: string, changes: Partial<TextElement>) => void
   onDeleteText?: (id: string) => void
+  onSelectImage?: (element: ImageElement) => void
+  onUpdateImage?: (id: string, changes: Partial<ImageElement>) => void
 }
 
 export function InfiniteCanvas({
@@ -31,9 +34,12 @@ export function InfiniteCanvas({
   controller,
   viewportRef,
   selectedTextId,
+  selectedImageId,
   onSelectText,
   onUpdateText,
   onDeleteText,
+  onSelectImage,
+  onUpdateImage,
 }: Props) {
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
@@ -64,6 +70,27 @@ export function InfiniteCanvas({
   } | null>(null)
   const stopTrackingRotation = useRef<(() => void) | null>(null)
   const suppressTextClick = useRef<string | null>(null)
+  const imageDrag = useRef<{
+    id: string
+    pointerId: number
+    clientX: number
+    clientY: number
+    x: number
+    y: number
+    camera: Camera
+    moved: boolean
+  } | null>(null)
+  const stopTrackingImageDrag = useRef<(() => void) | null>(null)
+  const imageRotation = useRef<{
+    id: string
+    pointerId: number
+    centerX: number
+    centerY: number
+    startAngle: number
+    startRotation: number
+  } | null>(null)
+  const stopTrackingImageRotation = useRef<(() => void) | null>(null)
+  const suppressImageClick = useRef<string | null>(null)
   const [grabbing, setGrabbing] = useState(false)
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
 
@@ -72,6 +99,8 @@ export function InfiniteCanvas({
       if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
       stopTrackingTextDrag.current?.()
       stopTrackingRotation.current?.()
+      stopTrackingImageDrag.current?.()
+      stopTrackingImageRotation.current?.()
       controller.stop()
     },
     [controller],
@@ -255,6 +284,116 @@ export function InfiniteCanvas({
     }
   }
 
+  function startImageDrag(
+    event: PointerEvent<HTMLDivElement>,
+    image: ImageElement,
+  ) {
+    event.stopPropagation()
+    if (event.button !== 0 || !onUpdateImage) return
+    event.preventDefault()
+    onSelectImage?.(image)
+    if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
+    imageClickTimer.current = null
+    event.currentTarget.setPointerCapture(event.pointerId)
+    imageDrag.current = {
+      id: image.id,
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      x: image.x,
+      y: image.y,
+      camera: useEditorStore.getState().camera,
+      moved: false,
+    }
+    stopTrackingImageDrag.current?.()
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const gesture = imageDrag.current
+      if (!gesture || gesture.pointerId !== moveEvent.pointerId) return
+      const delta = {
+        x: moveEvent.clientX - gesture.clientX,
+        y: moveEvent.clientY - gesture.clientY,
+      }
+      if (Math.hypot(delta.x, delta.y) < 3 && !gesture.moved) return
+      gesture.moved = true
+      onUpdateImage(
+        gesture.id,
+        textPositionAfterDrag(
+          { x: gesture.x, y: gesture.y },
+          delta,
+          gesture.camera,
+        ),
+      )
+    }
+    const onEnd = (endEvent: globalThis.PointerEvent) => {
+      const gesture = imageDrag.current
+      if (!gesture || gesture.pointerId !== endEvent.pointerId) return
+      if (gesture.moved) suppressImageClick.current = gesture.id
+      imageDrag.current = null
+      stopTrackingImageDrag.current?.()
+      stopTrackingImageDrag.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    stopTrackingImageDrag.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+  }
+
+  function startImageRotation(
+    event: PointerEvent<HTMLButtonElement>,
+    image: ImageElement,
+  ) {
+    event.stopPropagation()
+    event.preventDefault()
+    if (event.button !== 0 || !onUpdateImage) return
+    const bounds = event.currentTarget.parentElement?.getBoundingClientRect()
+    if (!bounds) return
+    const centerX = bounds.left + bounds.width / 2
+    const centerY = bounds.top + bounds.height / 2
+    imageRotation.current = {
+      id: image.id,
+      pointerId: event.pointerId,
+      centerX,
+      centerY,
+      startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX),
+      startRotation: image.rotation,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    stopTrackingImageRotation.current?.()
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const gesture = imageRotation.current
+      if (!gesture || gesture.pointerId !== moveEvent.pointerId) return
+      const angle = Math.atan2(
+        moveEvent.clientY - gesture.centerY,
+        moveEvent.clientX - gesture.centerX,
+      )
+      onUpdateImage(gesture.id, {
+        rotation: textRotationAfterDrag(
+          gesture.startRotation,
+          gesture.startAngle,
+          angle,
+        ),
+      })
+    }
+    const onEnd = (endEvent: globalThis.PointerEvent) => {
+      if (imageRotation.current?.pointerId !== endEvent.pointerId) return
+      imageRotation.current = null
+      stopTrackingImageRotation.current?.()
+      stopTrackingImageRotation.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    stopTrackingImageRotation.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+  }
+
   return (
     <div
       className={`canvas-viewport style-${presentation.style ?? 'story'} ${grabbing ? 'is-grabbing' : ''}`}
@@ -307,7 +446,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'}`}
             role={
               element.type === 'image' ||
               (element.type === 'text' && !presenting && onSelectText)
@@ -328,16 +467,22 @@ export function InfiniteCanvas({
                   : undefined
             }
             onPointerDown={
-              element.type === 'image' || element.type === 'video'
-                ? (event) => event.stopPropagation()
-                : element.type === 'text' && !presenting && onSelectText
-                  ? (event) => startTextDrag(event, element)
-                  : undefined
+              element.type === 'image'
+                ? (event) => startImageDrag(event, element)
+                : element.type === 'video'
+                  ? (event) => event.stopPropagation()
+                  : element.type === 'text' && !presenting && onSelectText
+                    ? (event) => startTextDrag(event, element)
+                    : undefined
             }
             onClick={
               element.type === 'image'
                 ? (event) => {
                     event.stopPropagation()
+                    if (suppressImageClick.current === element.id) {
+                      suppressImageClick.current = null
+                      return
+                    }
                     if (event.detail !== 1) return
                     if (imageClickTimer.current)
                       clearTimeout(imageClickTimer.current)
@@ -446,7 +591,25 @@ export function InfiniteCanvas({
                   )}
               </>
             ) : element.type === 'image' ? (
-              <img src={element.src} alt={element.alt} draggable={false} />
+              <>
+                <img src={element.src} alt={element.alt} draggable={false} />
+                {selectedImageId === element.id &&
+                  !presenting &&
+                  onUpdateImage && (
+                    <button
+                      type="button"
+                      className="image-rotate-handle"
+                      aria-label="Tourner l’image"
+                      title="Glisser pour tourner l’image"
+                      onPointerDown={(event) =>
+                        startImageRotation(event, element)
+                      }
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <RotateCw size={16} />
+                    </button>
+                  )}
+              </>
             ) : element.type === 'video' ? (
               playingVideoId === element.id ? (
                 <iframe

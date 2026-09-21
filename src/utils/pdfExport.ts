@@ -32,7 +32,10 @@ export function elementsForPdfFrame(
   frame: Frame,
 ): CanvasElement[] {
   return presentation.elements.filter((element) => {
-    if (element.type === 'text' && element.frameId)
+    if (
+      (element.type === 'text' || element.type === 'image') &&
+      element.frameId
+    )
       return element.frameId === frame.id
     const namedFrame = presentation.frames.find((candidate) =>
       element.id.startsWith(`${candidate.id}-`),

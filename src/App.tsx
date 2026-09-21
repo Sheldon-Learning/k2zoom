@@ -39,6 +39,7 @@ import { createPresentationPdf } from './utils/pdfExport'
 import type {
   Presentation,
   PresentationStyle,
+  ImageElement,
   TextElement,
 } from './types/presentation'
 
@@ -64,6 +65,7 @@ export default function App() {
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
 
   const controller = useMemo(
@@ -216,8 +218,171 @@ export default function App() {
     )
     if (frameIndex >= 0) setActiveFrame(frameIndex)
     setSelectedTextId(element.id)
+    setSelectedImageId(null)
     setShowTextEditor(true)
   }
+
+  function updateImageById(id: string, changes: Partial<ImageElement>) {
+    const latest = usePresentationStore.getState().presentation
+    replace({
+      ...latest,
+      elements: latest.elements.map((element) =>
+        element.id === id && element.type === 'image'
+          ? { ...element, ...changes }
+          : element,
+      ),
+    })
+  }
+
+  function selectImage(image: ImageElement) {
+    setSelectedImageId(image.id)
+    setSelectedTextId(null)
+  }
+
+  async function pasteImages(files: File[]) {
+    try {
+      const images = await prepareImages(files)
+      const latest = usePresentationStore.getState().presentation
+      const pastedCount = latest.elements.filter((element) =>
+        element.id.startsWith('pasted-image-'),
+      ).length
+      if (pastedCount + images.length > 24)
+        throw new Error('Limite de 24 images collées par présentation.')
+      const camera = useEditorStore.getState().camera
+      const added = await Promise.all(
+        images.map(async (image, index): Promise<ImageElement> => {
+          const preview = new Image()
+          preview.src = image.src
+          await preview.decode()
+          const scale = Math.min(
+            1,
+            480 / preview.naturalWidth,
+            320 / preview.naturalHeight,
+          )
+          const width = Math.max(1, Math.round(preview.naturalWidth * scale))
+          const height = Math.max(1, Math.round(preview.naturalHeight * scale))
+          return {
+            id: `pasted-image-${crypto.randomUUID()}`,
+            type: 'image',
+            frameId: currentFrame?.id,
+            src: image.src,
+            alt: image.alt || 'Image collée',
+            x: Math.round(camera.x - width / 2 + index * 32),
+            y: Math.round(camera.y - height / 2 + index * 32),
+            width,
+            height,
+            rotation: 0,
+          }
+        }),
+      )
+      const next = { ...latest, elements: [...latest.elements, ...added] }
+      if (JSON.stringify(next).length > 3_500_000)
+        throw new Error(
+          'Stockage local plein : utilisez des images plus petites.',
+        )
+      replace(next)
+      setSelectedImageId(added.at(-1)?.id ?? null)
+      setSelectedTextId(null)
+      setMessage(
+        `${added.length} image${added.length > 1 ? 's' : ''} collée${added.length > 1 ? 's' : ''}`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Impossible de coller cette image.',
+      )
+    }
+    window.setTimeout(() => setMessage(''), 4500)
+  }
+
+  function pasteCopiedImage(image: ImageElement) {
+    const latest = usePresentationStore.getState().presentation
+    const pastedCount = latest.elements.filter((element) =>
+      element.id.startsWith('pasted-image-'),
+    ).length
+    if (pastedCount >= 24) {
+      setMessage('Limite de 24 images collées par présentation.')
+      return
+    }
+    const camera = useEditorStore.getState().camera
+    const copy: ImageElement = {
+      ...image,
+      id: `pasted-image-${crypto.randomUUID()}`,
+      frameId: currentFrame?.id,
+      x: Math.round(camera.x - image.width / 2 + 32),
+      y: Math.round(camera.y - image.height / 2 + 32),
+    }
+    const next = { ...latest, elements: [...latest.elements, copy] }
+    if (JSON.stringify(next).length > 3_500_000) {
+      setMessage('Stockage local plein : utilisez des images plus petites.')
+      return
+    }
+    replace(next)
+    setSelectedImageId(copy.id)
+    setSelectedTextId(null)
+    setMessage('Image copiée sur le canvas')
+    window.setTimeout(() => setMessage(''), 4500)
+  }
+
+  useEffect(() => {
+    const isEditingText = (target: EventTarget | null) =>
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    const handleCopy = (event: ClipboardEvent) => {
+      if (useEditorStore.getState().presenting || isEditingText(event.target))
+        return
+      const image = usePresentationStore
+        .getState()
+        .presentation.elements.find(
+          (element): element is ImageElement =>
+            element.id === selectedImageId && element.type === 'image',
+        )
+      if (!image || !event.clipboardData) return
+      event.clipboardData.setData(
+        'application/x-zoomet-image',
+        JSON.stringify(image),
+      )
+      event.preventDefault()
+      setMessage('Image copiée : utilisez Ctrl+V pour la coller')
+      window.setTimeout(() => setMessage(''), 4500)
+    }
+    const handlePaste = (event: ClipboardEvent) => {
+      const target = event.target
+      if (useEditorStore.getState().presenting || isEditingText(target)) return
+      const files = Array.from(event.clipboardData?.items ?? [])
+        .filter(
+          (item) => item.kind === 'file' && item.type.startsWith('image/'),
+        )
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null)
+      if (!files.length) {
+        const copied = event.clipboardData?.getData(
+          'application/x-zoomet-image',
+        )
+        if (!copied) return
+        try {
+          const image = JSON.parse(copied) as ImageElement
+          if (image.type !== 'image' || typeof image.src !== 'string') return
+          event.preventDefault()
+          pasteCopiedImage(image)
+        } catch {
+          setMessage('Impossible de coller cette image.')
+        }
+        return
+      }
+      event.preventDefault()
+      void pasteImages(files)
+    }
+    window.addEventListener('copy', handleCopy)
+    window.addEventListener('paste', handlePaste)
+    return () => {
+      window.removeEventListener('copy', handleCopy)
+      window.removeEventListener('paste', handlePaste)
+    }
+  })
 
   function chooseStyle(style: PresentationStyle) {
     if (
@@ -347,6 +512,7 @@ export default function App() {
     if (!frame) return
     setActiveFrame(index)
     setSelectedTextId(null)
+    setSelectedImageId(null)
     controller.focusOn(frame, frame.duration)
   }
 
@@ -684,9 +850,12 @@ export default function App() {
           controller={controller}
           viewportRef={viewportRef}
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
+          selectedImageId={!cleanMode ? selectedImageId : null}
           onSelectText={!cleanMode ? selectText : undefined}
           onUpdateText={!cleanMode ? updateTextById : undefined}
           onDeleteText={!cleanMode ? deleteTextById : undefined}
+          onSelectImage={!cleanMode ? selectImage : undefined}
+          onUpdateImage={!cleanMode ? updateImageById : undefined}
         />
       </main>
       {!presenting && cleanMode && (

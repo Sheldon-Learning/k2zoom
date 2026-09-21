@@ -536,6 +536,48 @@ input:focus-visible {
   pointer-events: auto;
   cursor: zoom-in;
 }
+.image-element.image-selected {
+  z-index: 6;
+  overflow: visible;
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+  cursor: move;
+}
+.image-rotate-handle {
+  position: absolute;
+  top: -56px;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  transform: translateX(-50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface);
+  box-shadow: 0 4px 12px #0005;
+  cursor: grab;
+  touch-action: none;
+}
+.image-rotate-handle:after {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  width: 2px;
+  height: 15px;
+  background: var(--accent);
+  content: '';
+}
+.image-element.image-selected img {
+  border-radius: 13px;
+}
+.is-presenting .image-element,
+.is-clean .image-element {
+  cursor: zoom-in;
+}
 .image-element:focus-visible {
   outline: 3px solid #8dc9e9;
   outline-offset: 5px;
