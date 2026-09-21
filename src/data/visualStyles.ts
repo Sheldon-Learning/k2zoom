@@ -4,6 +4,7 @@ import type {
   ImageElement,
   Presentation,
   PresentationStyle,
+  TextElement,
   VideoElement,
 } from '../types/presentation'
 
@@ -263,6 +264,7 @@ export function buildVisualPresentation(
   style: Exclude<PresentationStyle, 'story'>,
   gallery: GalleryMedia[],
   title = 'Mon histoire visuelle',
+  previous?: Presentation,
 ): Presentation {
   const frames: Frame[] = []
   const elements: CanvasElement[] = []
@@ -283,7 +285,7 @@ export function buildVisualPresentation(
     })
     elements.push(...mediaElements(id, media, place))
   })
-  return {
+  const next: Presentation = {
     version: 1,
     title,
     elements,
@@ -291,4 +293,43 @@ export function buildVisualPresentation(
     path: frames.map((frame) => frame.id),
     style,
   }
+  if (!previous || previous.style === 'story') return next
+
+  const oldTexts = previous.elements.filter(
+    (element): element is TextElement => element.type === 'text',
+  )
+  const nextElementIds = new Set(next.elements.map((element) => element.id))
+  const transferred = oldTexts.flatMap((text) => {
+    const oldFrame =
+      previous.frames.find((frame) => text.id === `${frame.id}-caption`) ??
+      [...previous.frames].sort(
+        (a, b) =>
+          Math.hypot(
+            text.x - (a.x + a.width / 2),
+            text.y - (a.y + a.height / 2),
+          ) -
+          Math.hypot(
+            text.x - (b.x + b.width / 2),
+            text.y - (b.y + b.height / 2),
+          ),
+      )[0]
+    const newFrame = next.frames.find((frame) => frame.id === oldFrame?.id)
+    if (!oldFrame || !newFrame) return []
+    return [
+      {
+        ...text,
+        x: text.x + newFrame.x - oldFrame.x,
+        y: text.y + newFrame.y - oldFrame.y,
+        rotation: text.rotation + newFrame.rotation - oldFrame.rotation,
+      },
+    ]
+  })
+  const transferredById = new Map(transferred.map((text) => [text.id, text]))
+  next.elements = [
+    ...next.elements.map(
+      (element) => transferredById.get(element.id) ?? element,
+    ),
+    ...transferred.filter((text) => !nextElementIds.has(text.id)),
+  ]
+  return next
 }

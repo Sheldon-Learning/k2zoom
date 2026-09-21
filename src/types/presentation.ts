@@ -32,6 +32,8 @@ export interface TextElement extends BaseElement {
   text: string
   variant: 'eyebrow' | 'heading' | 'body' | 'stat'
   color: string
+  fontFamily?: 'Manrope' | 'DM Sans' | 'Georgia' | 'Arial' | 'Courier New'
+  fontSize?: number
 }
 
 export interface ShapeElement extends BaseElement {

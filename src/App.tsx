@@ -12,12 +12,14 @@ import {
   Images,
   Play,
   Sparkles,
+  Type,
   Upload,
   Video,
   X,
 } from 'lucide-react'
 import { InfiniteCanvas } from './components/canvas/InfiniteCanvas'
 import { StylePicker } from './components/ui/StylePicker'
+import { TextEditor } from './components/ui/TextEditor'
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
 import { VideoDialog } from './components/ui/VideoDialog'
 import { demoPresentation } from './data/demo'
@@ -32,7 +34,11 @@ import { useEditorStore } from './store/editorStore'
 import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
 import { prepareImages } from './utils/images'
-import type { Presentation, PresentationStyle } from './types/presentation'
+import type {
+  Presentation,
+  PresentationStyle,
+  TextElement,
+} from './types/presentation'
 
 export default function App() {
   const presentation = usePresentationStore((state) => state.presentation)
@@ -54,6 +60,8 @@ export default function App() {
   const [showStyles, setShowStyles] = useState(false)
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [cleanMode, setCleanMode] = useState(false)
+  const [showTextEditor, setShowTextEditor] = useState(false)
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
 
   const controller = useMemo(
     () =>
@@ -72,6 +80,109 @@ export default function App() {
     .map((id) => presentation.frames.find((frame) => frame.id === id))
     .filter((frame) => frame !== undefined)
   const gallery = galleryFromPresentation(presentation)
+  const currentFrame = pathFrames[activeFrame]
+  const selectedText = presentation.elements.find(
+    (element): element is TextElement =>
+      element.type === 'text' && element.id === selectedTextId,
+  )
+  const frameTexts = presentation.elements.filter(
+    (element): element is TextElement =>
+      element.type === 'text' &&
+      !!currentFrame &&
+      ((element.x >= currentFrame.x - 30 &&
+        element.x <= currentFrame.x + currentFrame.width + 30 &&
+        element.y >= currentFrame.y - 30 &&
+        element.y <= currentFrame.y + currentFrame.height + 160) ||
+        element.id === selectedTextId),
+  )
+
+  function updateFrameTitle(title: string) {
+    if (!currentFrame) return
+    const prefix = currentFrame.name.includes('·')
+      ? `${currentFrame.name.split('·')[0].trim()} · `
+      : ''
+    replace({
+      ...presentation,
+      frames: presentation.frames.map((frame) =>
+        frame.id === currentFrame.id
+          ? { ...frame, name: `${prefix}${title}` }
+          : frame,
+      ),
+      elements: presentation.elements.map((element) =>
+        element.id === `${currentFrame.id}-caption` && element.type === 'text'
+          ? { ...element, text: title }
+          : element.id === `${currentFrame.id}-video` &&
+              element.type === 'video'
+            ? { ...element, title }
+            : element,
+      ),
+    })
+  }
+
+  function updateText(changes: Partial<TextElement>) {
+    if (!selectedTextId) return
+    const captionFrame = presentation.frames.find(
+      (frame) => selectedTextId === `${frame.id}-caption`,
+    )
+    replace({
+      ...presentation,
+      frames:
+        captionFrame && changes.text !== undefined
+          ? presentation.frames.map((frame) =>
+              frame.id === captionFrame.id
+                ? {
+                    ...frame,
+                    name: `${frame.name.includes('·') ? `${frame.name.split('·')[0].trim()} · ` : ''}${changes.text}`,
+                  }
+                : frame,
+            )
+          : presentation.frames,
+      elements: presentation.elements.map((element) =>
+        element.id === selectedTextId && element.type === 'text'
+          ? { ...element, ...changes }
+          : captionFrame &&
+              changes.text !== undefined &&
+              element.id === `${captionFrame.id}-video` &&
+              element.type === 'video'
+            ? { ...element, title: changes.text }
+            : element,
+      ),
+    })
+  }
+
+  function addText() {
+    if (!currentFrame) return
+    const element: TextElement = {
+      id: `text-${crypto.randomUUID()}`,
+      type: 'text',
+      variant: 'body',
+      text: 'Votre texte',
+      color: '#5e7281',
+      fontFamily: 'DM Sans',
+      fontSize: 21,
+      x: currentFrame.x + 32,
+      y: currentFrame.y + currentFrame.height + 34,
+      width: Math.min(currentFrame.width - 64, 480),
+      height: 90,
+      rotation: 0,
+    }
+    replace({ ...presentation, elements: [...presentation.elements, element] })
+    setSelectedTextId(element.id)
+    setShowTextEditor(true)
+  }
+
+  function selectText(element: TextElement) {
+    const frameIndex = pathFrames.findIndex(
+      (frame) =>
+        element.x >= frame.x - 30 &&
+        element.x <= frame.x + frame.width + 30 &&
+        element.y >= frame.y - 30 &&
+        element.y <= frame.y + frame.height + 160,
+    )
+    if (frameIndex >= 0) setActiveFrame(frameIndex)
+    setSelectedTextId(element.id)
+    setShowTextEditor(true)
+  }
 
   function chooseStyle(style: PresentationStyle) {
     if (
@@ -102,6 +213,7 @@ export default function App() {
             style,
             gallery.length ? gallery : demoGallery,
             presentation.title,
+            presentation,
           )
     replace(next)
     setActiveFrame(0)
@@ -138,6 +250,7 @@ export default function App() {
           visualStyle,
           nextGallery,
           presentation.title,
+          hasCustomImage ? presentation : undefined,
         )
       }
       if (JSON.stringify(next).length > 3_500_000)
@@ -183,6 +296,7 @@ export default function App() {
             presentation.style,
             [...gallery, video],
             presentation.title,
+            presentation,
           )
         : appendMediaToStory(presentation, [video])
     replace(next)
@@ -197,6 +311,7 @@ export default function App() {
     const frame = pathFrames[index]
     if (!frame) return
     setActiveFrame(index)
+    setSelectedTextId(null)
     controller.focusOn(frame, frame.duration)
   }
 
@@ -228,7 +343,8 @@ export default function App() {
       }
       if (
         event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement
       )
         return
       if (useEditorStore.getState().presenting) {
@@ -307,6 +423,7 @@ export default function App() {
               type="button"
               onClick={() => {
                 setShowMenu(false)
+                setShowTextEditor(false)
                 setCleanMode(true)
               }}
               aria-label="Masquer les panneaux et agrandir le canvas"
@@ -348,6 +465,12 @@ export default function App() {
               onClick={() => imageRef.current?.click()}
             >
               <Images size={16} /> Images
+            </button>
+            <button
+              className="button button-light text-top-button"
+              onClick={() => setShowTextEditor(true)}
+            >
+              <Type size={16} /> Texte
             </button>
             <button
               className="icon-button video-top-button"
@@ -416,6 +539,12 @@ export default function App() {
             >
               <Video size={18} /> Ajouter une vidéo <ArrowRight size={14} />
             </button>
+            <button
+              className="sidebar-item sidebar-action"
+              onClick={() => setShowTextEditor(true)}
+            >
+              <Type size={18} /> Modifier le texte <ArrowRight size={14} />
+            </button>
             <div className="sidebar-separator" />
             <div className="sidebar-section-label">
               YOUR STORY <span>{pathFrames.length}</span>
@@ -461,6 +590,8 @@ export default function App() {
           presentation={presentation}
           controller={controller}
           viewportRef={viewportRef}
+          selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
+          onSelectText={!cleanMode ? selectText : undefined}
         />
       </main>
       {!presenting && cleanMode && (
@@ -532,6 +663,28 @@ export default function App() {
             <ArrowRight size={16} />
           </div>
         </footer>
+      )}
+      {!presenting && !cleanMode && showTextEditor && (
+        <TextEditor
+          frame={currentFrame}
+          visualStyle={!!presentation.style && presentation.style !== 'story'}
+          texts={frameTexts}
+          selected={selectedText}
+          onSelect={setSelectedTextId}
+          onTitleChange={updateFrameTitle}
+          onChange={updateText}
+          onAdd={addText}
+          onDelete={() => {
+            replace({
+              ...presentation,
+              elements: presentation.elements.filter(
+                (element) => element.id !== selectedTextId,
+              ),
+            })
+            setSelectedTextId(null)
+          }}
+          onClose={() => setShowTextEditor(false)}
+        />
       )}
       {presenting && (
         <div className="presentation-controls">

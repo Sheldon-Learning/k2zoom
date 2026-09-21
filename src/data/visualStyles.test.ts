@@ -6,6 +6,7 @@ import {
   galleryFromPresentation,
 } from './visualStyles'
 import { demoPresentation } from './demo'
+import type { TextElement } from '../types/presentation'
 
 describe('visual presentation layouts', () => {
   it('places a nine-image gallery in four columns over three rows', () => {
@@ -56,6 +57,58 @@ describe('visual presentation layouts', () => {
     expect(
       galleryFromPresentation(presentation).map((item) => item.kind),
     ).toEqual(['image', 'video', 'image'])
+  })
+
+  it('keeps edited captions and added text when the gallery layout changes', () => {
+    const original = buildVisualPresentation(
+      'timeline',
+      demoGallery.slice(0, 2),
+    )
+    const custom: TextElement = {
+      id: 'my-note',
+      type: 'text',
+      variant: 'body',
+      text: 'Une note personnelle',
+      color: '#123456',
+      fontFamily: 'Georgia',
+      fontSize: 32,
+      x: original.frames[0].x + 50,
+      y: original.frames[0].y + 80,
+      width: 300,
+      height: 90,
+      rotation: 0,
+    }
+    const edited = {
+      ...original,
+      elements: [
+        ...original.elements.map((element) =>
+          element.id === 'visual-1-caption' && element.type === 'text'
+            ? { ...element, text: 'Titre modifié', fontSize: 38 }
+            : element,
+        ),
+        custom,
+      ],
+    }
+    const next = buildVisualPresentation(
+      'grid',
+      galleryFromPresentation(edited),
+      edited.title,
+      edited,
+    )
+    expect(
+      next.elements.find((element) => element.id === 'visual-1-caption'),
+    ).toMatchObject({
+      text: 'Titre modifié',
+      fontSize: 38,
+    })
+    expect(
+      next.elements.find((element) => element.id === 'my-note'),
+    ).toMatchObject({
+      text: custom.text,
+      fontFamily: 'Georgia',
+      fontSize: 32,
+      x: custom.x + next.frames[0].x - original.frames[0].x,
+    })
   })
 
   it('adds media after the classic story without removing its content', () => {

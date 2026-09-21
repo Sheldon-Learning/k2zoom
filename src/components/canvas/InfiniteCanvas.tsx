@@ -6,6 +6,7 @@ import type {
   Camera,
   ImageElement,
   Presentation,
+  TextElement,
 } from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
 import { RouteOverlay } from './RouteOverlay'
@@ -15,12 +16,16 @@ interface Props {
   presentation: Presentation
   controller: CameraController
   viewportRef: React.RefObject<HTMLDivElement | null>
+  selectedTextId?: string | null
+  onSelectText?: (element: TextElement) => void
 }
 
 export function InfiniteCanvas({
   presentation,
   controller,
   viewportRef,
+  selectedTextId,
+  onSelectText,
 }: Props) {
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
@@ -163,16 +168,30 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
-            role={element.type === 'image' ? 'button' : undefined}
-            tabIndex={element.type === 'image' ? 0 : undefined}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
+            role={
+              element.type === 'image' ||
+              (element.type === 'text' && !presenting && onSelectText)
+                ? 'button'
+                : undefined
+            }
+            tabIndex={
+              element.type === 'image' ||
+              (element.type === 'text' && !presenting && onSelectText)
+                ? 0
+                : undefined
+            }
             aria-label={
               element.type === 'image'
                 ? `${element.alt}. Clic pour zoomer, double clic pour revenir.`
-                : undefined
+                : element.type === 'text' && !presenting && onSelectText
+                  ? `Modifier le texte : ${element.text}`
+                  : undefined
             }
             onPointerDown={
-              element.type === 'image' || element.type === 'video'
+              element.type === 'image' ||
+              element.type === 'video' ||
+              (element.type === 'text' && !presenting && onSelectText)
                 ? (event) => event.stopPropagation()
                 : undefined
             }
@@ -188,7 +207,12 @@ export function InfiniteCanvas({
                       imageClickTimer.current = null
                     }, 220)
                   }
-                : undefined
+                : element.type === 'text' && !presenting && onSelectText
+                  ? (event) => {
+                      event.stopPropagation()
+                      onSelectText?.(element)
+                    }
+                  : undefined
             }
             onDoubleClick={
               element.type === 'image'
@@ -212,7 +236,15 @@ export function InfiniteCanvas({
                       restoreImageView()
                     }
                   }
-                : undefined
+                : element.type === 'text' && !presenting && onSelectText
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onSelectText(element)
+                      }
+                    }
+                  : undefined
             }
             style={{
               left: element.x,
@@ -221,6 +253,9 @@ export function InfiniteCanvas({
               height: element.height,
               transform: `rotate(${element.rotation}deg)`,
               color: element.type === 'text' ? element.color : undefined,
+              fontFamily:
+                element.type === 'text' ? element.fontFamily : undefined,
+              fontSize: element.type === 'text' ? element.fontSize : undefined,
               background: element.type === 'shape' ? element.fill : undefined,
             }}
           >

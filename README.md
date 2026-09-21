@@ -61,6 +61,8 @@ Drag the canvas to pan. Use the wheel to zoom toward the cursor; horizontal trac
 
 Click the Zoomet logo to hide the top bar, sidebar, and presentation path and expand the canvas. Click the floating Zoomet logo or press Escape to restore the editor panels.
 
+Use **Texte** in the top bar or **Modifier le texte** in the sidebar to rename the active step, add a text block, or edit its font, size, and position. Click an existing text block on the canvas to edit it directly. Changes are saved with the presentation in local storage and included in JSON exports.
+
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
 
 Paste a YouTube watch, share, Shorts, or embed URL through **Ajouter une vidéo**. The new frame appears at the end of the current path, including the Classic story. Select it and press **Lire** on the video card to load the player. Playback is available in both editor and presentation mode; moving to another frame unloads the player. A video must permit embedding on third-party sites to play here.

@@ -45,4 +45,29 @@ describe('presentation JSON', () => {
     }
     expect(() => parsePresentation(JSON.stringify(bad))).toThrow()
   })
+  it('keeps text font settings in exported presentations', () => {
+    const edited = {
+      ...demoPresentation,
+      elements: demoPresentation.elements.map((element) =>
+        element.id === 'intro-heading' && element.type === 'text'
+          ? {
+              ...element,
+              text: 'Mon titre',
+              fontFamily: 'Georgia',
+              fontSize: 72,
+            }
+          : element,
+      ),
+    }
+    expect(parsePresentation(JSON.stringify(edited))).toEqual(edited)
+    const invalid = {
+      ...edited,
+      elements: edited.elements.map((element) =>
+        element.id === 'intro-heading'
+          ? { ...element, fontSize: 500 }
+          : element,
+      ),
+    }
+    expect(() => parsePresentation(JSON.stringify(invalid))).toThrow()
+  })
 })

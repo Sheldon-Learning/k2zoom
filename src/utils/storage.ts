@@ -69,7 +69,19 @@ export function parsePresentation(json: string): Presentation {
             ['eyebrow', 'heading', 'body', 'stat'].includes(
               String(element.variant),
             ) &&
-            typeof element.color === 'string'
+            typeof element.color === 'string' &&
+            (element.fontFamily === undefined ||
+              [
+                'Manrope',
+                'DM Sans',
+                'Georgia',
+                'Arial',
+                'Courier New',
+              ].includes(String(element.fontFamily))) &&
+            (element.fontSize === undefined ||
+              (isNumber(element.fontSize) &&
+                element.fontSize >= 10 &&
+                element.fontSize <= 120))
           : element.type === 'shape'
             ? ['circle', 'rect'].includes(String(element.shape)) &&
               typeof element.fill === 'string'
