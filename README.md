@@ -64,6 +64,8 @@ Click the Zoomet logo to hide the top bar, sidebar, and presentation path and ex
 
 Use **Texte** in the top bar or **Modifier le texte** in the sidebar to rename the active step, add a text block, or edit its font, size, and position. Click an existing text block on the canvas to edit it directly. Changes are saved with the presentation in local storage and included in JSON exports.
 
+To remove a text block or heading, select it on the canvas and use its red trash button, choose **Supprimer ce texte** in the Text panel, or press Delete/Backspace while focus is outside an input. Editing a title or text in the panel updates the canvas immediately.
+
 Drag a text block to place it anywhere on the canvas. Select it and drag the round handle to rotate it, or use the rotation slider in **Texte**. **Titre XXL** creates a large video-style heading with a dark outline. The editor also offers font sizes up to 240 px, colors, and shadow effects.
 
 Use **File → Télécharger PDF** to save the full presentation as a landscape PDF, one step per page. Videos appear as clickable YouTube links. If a remote image cannot be loaded by the browser, the PDF still downloads with a placeholder and reports how many images were unavailable.

@@ -160,6 +160,21 @@ export default function App() {
     if (selectedTextId) updateTextById(selectedTextId, changes)
   }
 
+  function deleteTextById(id: string) {
+    const latest = usePresentationStore.getState().presentation
+    if (
+      !latest.elements.some(
+        (element) => element.id === id && element.type === 'text',
+      )
+    )
+      return
+    replace({
+      ...latest,
+      elements: latest.elements.filter((element) => element.id !== id),
+    })
+    setSelectedTextId(null)
+  }
+
   function addText(kind: 'body' | 'heading' = 'body') {
     if (!currentFrame) return
     const title = kind === 'heading'
@@ -364,9 +379,21 @@ export default function App() {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
+        event.target instanceof HTMLSelectElement ||
+        (event.target instanceof HTMLElement && event.target.isContentEditable)
       )
         return
+      if (
+        !useEditorStore.getState().presenting &&
+        !cleanMode &&
+        showTextEditor &&
+        selectedTextId &&
+        (event.key === 'Delete' || event.key === 'Backspace')
+      ) {
+        event.preventDefault()
+        deleteTextById(selectedTextId)
+        return
+      }
       if (useEditorStore.getState().presenting) {
         if (
           event.key === 'ArrowRight' ||
@@ -659,6 +686,7 @@ export default function App() {
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
           onSelectText={!cleanMode ? selectText : undefined}
           onUpdateText={!cleanMode ? updateTextById : undefined}
+          onDeleteText={!cleanMode ? deleteTextById : undefined}
         />
       </main>
       {!presenting && cleanMode && (
@@ -743,13 +771,7 @@ export default function App() {
           onAdd={() => addText()}
           onAddTitle={() => addText('heading')}
           onDelete={() => {
-            replace({
-              ...presentation,
-              elements: presentation.elements.filter(
-                (element) => element.id !== selectedTextId,
-              ),
-            })
-            setSelectedTextId(null)
+            if (selectedTextId) deleteTextById(selectedTextId)
           }}
           onClose={() => setShowTextEditor(false)}
         />

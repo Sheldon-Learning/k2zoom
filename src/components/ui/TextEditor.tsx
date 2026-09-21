@@ -97,7 +97,9 @@ export function TextEditor({
         </div>
       </div>
       <p className="text-editor-tip">
-        Glissez un texte sur le canvas. Utilisez sa poignée pour le tourner.
+        Cliquez sur un texte ou un titre pour le modifier. Glissez-le pour le
+        déplacer ; utilisez les poignées pour le tourner ou le supprimer. La
+        touche Suppr fonctionne aussi hors des champs de saisie.
       </p>
       <div className="text-editor-list">
         {texts.map((text) => (

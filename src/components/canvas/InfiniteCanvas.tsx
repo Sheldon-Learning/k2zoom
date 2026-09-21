@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
-import { Hand, Minus, Play, Plus, RotateCw, Scan } from 'lucide-react'
+import { Hand, Minus, Play, Plus, RotateCw, Scan, Trash2 } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
 import {
   textPositionAfterDrag,
@@ -23,6 +23,7 @@ interface Props {
   selectedTextId?: string | null
   onSelectText?: (element: TextElement) => void
   onUpdateText?: (id: string, changes: Partial<TextElement>) => void
+  onDeleteText?: (id: string) => void
 }
 
 export function InfiniteCanvas({
@@ -32,6 +33,7 @@ export function InfiniteCanvas({
   selectedTextId,
   onSelectText,
   onUpdateText,
+  onDeleteText,
 }: Props) {
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
@@ -412,18 +414,35 @@ export function InfiniteCanvas({
                 {selectedTextId === element.id &&
                   !presenting &&
                   onUpdateText && (
-                    <button
-                      type="button"
-                      className="text-rotate-handle"
-                      aria-label="Tourner le texte"
-                      title="Glisser pour tourner"
-                      onPointerDown={(event) =>
-                        startTextRotation(event, element)
-                      }
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <RotateCw size={15} />
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="text-rotate-handle"
+                        aria-label="Tourner le texte"
+                        title="Glisser pour tourner"
+                        onPointerDown={(event) =>
+                          startTextRotation(event, element)
+                        }
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <RotateCw size={15} />
+                      </button>
+                      {onDeleteText && (
+                        <button
+                          type="button"
+                          className="text-delete-handle"
+                          aria-label={`Supprimer le texte : ${element.text}`}
+                          title="Supprimer ce texte"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onDeleteText(element.id)
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </>
                   )}
               </>
             ) : element.type === 'image' ? (

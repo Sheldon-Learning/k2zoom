@@ -490,11 +490,35 @@ input:focus-visible {
   background: var(--accent);
   content: '';
 }
+.text-delete-handle {
+  position: absolute;
+  top: -56px;
+  right: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #d64d62;
+  color: #fff;
+  box-shadow: 0 4px 12px #0005;
+  cursor: pointer;
+}
+.text-delete-handle:hover,
+.text-delete-handle:focus-visible {
+  background: #b92e45;
+}
 .text-element:hover,
 .text-element.text-selected {
   outline: 2px solid var(--accent);
   outline-offset: 5px;
   border-radius: 3px;
+}
+.text-element.text-selected {
+  z-index: 6;
 }
 .text-element:focus-visible {
   outline: 3px solid var(--accent);
