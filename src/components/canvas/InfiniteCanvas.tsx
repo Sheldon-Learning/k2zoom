@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
-import { Hand, Minus, Play, Plus, Scan } from 'lucide-react'
+import { Hand, Minus, Play, Plus, RotateCw, Scan } from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
+import {
+  textPositionAfterDrag,
+  textRotationAfterDrag,
+} from '../../engine/textGeometry'
 import type {
   Camera,
   ImageElement,
@@ -18,6 +22,7 @@ interface Props {
   viewportRef: React.RefObject<HTMLDivElement | null>
   selectedTextId?: string | null
   onSelectText?: (element: TextElement) => void
+  onUpdateText?: (id: string, changes: Partial<TextElement>) => void
 }
 
 export function InfiniteCanvas({
@@ -26,6 +31,7 @@ export function InfiniteCanvas({
   viewportRef,
   selectedTextId,
   onSelectText,
+  onUpdateText,
 }: Props) {
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
@@ -35,12 +41,35 @@ export function InfiniteCanvas({
     null,
   )
   const imageClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const textDrag = useRef<{
+    id: string
+    pointerId: number
+    clientX: number
+    clientY: number
+    x: number
+    y: number
+    camera: Camera
+    moved: boolean
+  } | null>(null)
+  const stopTrackingTextDrag = useRef<(() => void) | null>(null)
+  const textRotation = useRef<{
+    id: string
+    pointerId: number
+    centerX: number
+    centerY: number
+    startAngle: number
+    startRotation: number
+  } | null>(null)
+  const stopTrackingRotation = useRef<(() => void) | null>(null)
+  const suppressTextClick = useRef<string | null>(null)
   const [grabbing, setGrabbing] = useState(false)
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
 
   useEffect(
     () => () => {
       if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
+      stopTrackingTextDrag.current?.()
+      stopTrackingRotation.current?.()
       controller.stop()
     },
     [controller],
@@ -116,6 +145,114 @@ export function InfiniteCanvas({
     })
   }
 
+  function startTextDrag(
+    event: PointerEvent<HTMLDivElement>,
+    text: TextElement,
+  ) {
+    event.stopPropagation()
+    if (event.button !== 0 || !onUpdateText) return
+    event.preventDefault()
+    onSelectText?.(text)
+    event.currentTarget.setPointerCapture(event.pointerId)
+    textDrag.current = {
+      id: text.id,
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      x: text.x,
+      y: text.y,
+      camera: useEditorStore.getState().camera,
+      moved: false,
+    }
+    stopTrackingTextDrag.current?.()
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const gesture = textDrag.current
+      if (!gesture || gesture.pointerId !== moveEvent.pointerId) return
+      const delta = {
+        x: moveEvent.clientX - gesture.clientX,
+        y: moveEvent.clientY - gesture.clientY,
+      }
+      if (Math.hypot(delta.x, delta.y) < 2 && !gesture.moved) return
+      gesture.moved = true
+      onUpdateText(
+        gesture.id,
+        textPositionAfterDrag(
+          { x: gesture.x, y: gesture.y },
+          delta,
+          gesture.camera,
+        ),
+      )
+    }
+    const onEnd = (endEvent: globalThis.PointerEvent) => {
+      const gesture = textDrag.current
+      if (!gesture || gesture.pointerId !== endEvent.pointerId) return
+      if (gesture.moved) suppressTextClick.current = gesture.id
+      textDrag.current = null
+      stopTrackingTextDrag.current?.()
+      stopTrackingTextDrag.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    stopTrackingTextDrag.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+  }
+
+  function startTextRotation(
+    event: PointerEvent<HTMLButtonElement>,
+    text: TextElement,
+  ) {
+    event.stopPropagation()
+    event.preventDefault()
+    if (event.button !== 0 || !onUpdateText) return
+    const bounds = event.currentTarget.parentElement?.getBoundingClientRect()
+    if (!bounds) return
+    const centerX = bounds.left + bounds.width / 2
+    const centerY = bounds.top + bounds.height / 2
+    textRotation.current = {
+      id: text.id,
+      pointerId: event.pointerId,
+      centerX,
+      centerY,
+      startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX),
+      startRotation: text.rotation,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    stopTrackingRotation.current?.()
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const gesture = textRotation.current
+      if (!gesture || gesture.pointerId !== moveEvent.pointerId) return
+      const angle = Math.atan2(
+        moveEvent.clientY - gesture.centerY,
+        moveEvent.clientX - gesture.centerX,
+      )
+      onUpdateText(gesture.id, {
+        rotation: textRotationAfterDrag(
+          gesture.startRotation,
+          gesture.startAngle,
+          angle,
+        ),
+      })
+    }
+    const onEnd = (endEvent: globalThis.PointerEvent) => {
+      if (textRotation.current?.pointerId !== endEvent.pointerId) return
+      textRotation.current = null
+      stopTrackingRotation.current?.()
+      stopTrackingRotation.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    stopTrackingRotation.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+  }
+
   return (
     <div
       className={`canvas-viewport style-${presentation.style ?? 'story'} ${grabbing ? 'is-grabbing' : ''}`}
@@ -168,7 +305,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? 'image-element' : 'video-element'}`}
             role={
               element.type === 'image' ||
               (element.type === 'text' && !presenting && onSelectText)
@@ -189,11 +326,11 @@ export function InfiniteCanvas({
                   : undefined
             }
             onPointerDown={
-              element.type === 'image' ||
-              element.type === 'video' ||
-              (element.type === 'text' && !presenting && onSelectText)
+              element.type === 'image' || element.type === 'video'
                 ? (event) => event.stopPropagation()
-                : undefined
+                : element.type === 'text' && !presenting && onSelectText
+                  ? (event) => startTextDrag(event, element)
+                  : undefined
             }
             onClick={
               element.type === 'image'
@@ -210,6 +347,10 @@ export function InfiniteCanvas({
                 : element.type === 'text' && !presenting && onSelectText
                   ? (event) => {
                       event.stopPropagation()
+                      if (suppressTextClick.current === element.id) {
+                        suppressTextClick.current = null
+                        return
+                      }
                       onSelectText?.(element)
                     }
                   : undefined
@@ -254,13 +395,37 @@ export function InfiniteCanvas({
               transform: `rotate(${element.rotation}deg)`,
               color: element.type === 'text' ? element.color : undefined,
               fontFamily:
-                element.type === 'text' ? element.fontFamily : undefined,
+                element.type === 'text' && element.fontFamily
+                  ? element.fontFamily === 'Impact'
+                    ? 'Impact, "Arial Black", sans-serif'
+                    : element.fontFamily === 'Courier New'
+                      ? '"Courier New", monospace'
+                      : element.fontFamily
+                  : undefined,
               fontSize: element.type === 'text' ? element.fontSize : undefined,
               background: element.type === 'shape' ? element.fill : undefined,
             }}
           >
             {element.type === 'text' ? (
-              element.text
+              <>
+                <span className="text-content">{element.text}</span>
+                {selectedTextId === element.id &&
+                  !presenting &&
+                  onUpdateText && (
+                    <button
+                      type="button"
+                      className="text-rotate-handle"
+                      aria-label="Tourner le texte"
+                      title="Glisser pour tourner"
+                      onPointerDown={(event) =>
+                        startTextRotation(event, element)
+                      }
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <RotateCw size={15} />
+                    </button>
+                  )}
+              </>
             ) : element.type === 'image' ? (
               <img src={element.src} alt={element.alt} draggable={false} />
             ) : element.type === 'video' ? (

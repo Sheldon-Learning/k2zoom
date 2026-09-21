@@ -29,11 +29,21 @@ interface BaseElement {
 
 export interface TextElement extends BaseElement {
   type: 'text'
+  frameId?: string
   text: string
   variant: 'eyebrow' | 'heading' | 'body' | 'stat'
   color: string
-  fontFamily?: 'Manrope' | 'DM Sans' | 'Georgia' | 'Arial' | 'Courier New'
+  fontFamily?:
+    | 'Manrope'
+    | 'DM Sans'
+    | 'Georgia'
+    | 'Arial'
+    | 'Courier New'
+    | 'Impact'
+    | 'Arial Black'
   fontSize?: number
+  effect?: 'plain' | 'video' | 'shadow'
+  customColor?: boolean
 }
 
 export interface ShapeElement extends BaseElement {

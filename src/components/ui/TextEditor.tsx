@@ -1,4 +1,4 @@
-import { Plus, Trash2, X } from 'lucide-react'
+import { Plus, RotateCw, Trash2, X } from 'lucide-react'
 import type { Frame, TextElement } from '../../types/presentation'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onTitleChange: (title: string) => void
   onChange: (changes: Partial<TextElement>) => void
   onAdd: () => void
+  onAddTitle: () => void
   onDelete: () => void
   onClose: () => void
 }
@@ -20,10 +21,21 @@ const fonts: NonNullable<TextElement['fontFamily']>[] = [
   'Georgia',
   'Arial',
   'Courier New',
+  'Impact',
+  'Arial Black',
+]
+
+const colors = [
+  '#ffffff',
+  '#172736',
+  '#2cc5df',
+  '#f20b68',
+  '#ffbf18',
+  '#93bf4d',
 ]
 
 function defaultSize(text: TextElement, visualStyle: boolean): number {
-  if (text.variant === 'heading') return 57
+  if (text.variant === 'heading') return text.effect === 'video' ? 100 : 57
   if (text.variant === 'eyebrow') return 15
   return visualStyle && text.id.endsWith('-caption') ? 27 : 21
 }
@@ -37,6 +49,7 @@ export function TextEditor({
   onTitleChange,
   onChange,
   onAdd,
+  onAddTitle,
   onDelete,
   onClose,
 }: Props) {
@@ -74,10 +87,18 @@ export function TextEditor({
       </label>
       <div className="text-editor-section">
         <span>Blocs de texte</span>
-        <button type="button" onClick={onAdd} disabled={!frame}>
-          <Plus size={15} /> Ajouter
-        </button>
+        <div className="text-editor-add-actions">
+          <button type="button" onClick={onAdd} disabled={!frame}>
+            <Plus size={15} /> Texte
+          </button>
+          <button type="button" onClick={onAddTitle} disabled={!frame}>
+            <Plus size={15} /> Titre XXL
+          </button>
+        </div>
       </div>
+      <p className="text-editor-tip">
+        Glissez un texte sur le canvas. Utilisez sa poignée pour le tourner.
+      </p>
       <div className="text-editor-list">
         {texts.map((text) => (
           <button
@@ -129,15 +150,73 @@ export function TextEditor({
               <input
                 type="number"
                 min={10}
-                max={120}
+                max={240}
                 value={selected.fontSize ?? defaultSize(selected, visualStyle)}
                 onChange={(event) => {
                   const value = Number(event.target.value)
-                  if (value >= 10 && value <= 120) onChange({ fontSize: value })
+                  if (value >= 10 && value <= 240) onChange({ fontSize: value })
                 }}
               />
             </label>
           </div>
+          <label className="text-editor-field">
+            <span>Style</span>
+            <select
+              value={selected.effect ?? 'plain'}
+              onChange={(event) =>
+                onChange({
+                  effect: event.target.value as TextElement['effect'],
+                })
+              }
+            >
+              <option value="plain">Simple</option>
+              <option value="video">Titre vidéo avec contour</option>
+              <option value="shadow">Ombre portée</option>
+            </select>
+          </label>
+          <div className="text-editor-color-heading">Couleur du texte</div>
+          <div className="text-editor-colors">
+            <input
+              aria-label="Choisir une couleur personnalisée"
+              type="color"
+              value={
+                /^#[0-9a-f]{6}$/i.test(selected.color)
+                  ? selected.color
+                  : '#ffffff'
+              }
+              onChange={(event) =>
+                onChange({ color: event.target.value, customColor: true })
+              }
+            />
+            {colors.map((color) => (
+              <button
+                type="button"
+                key={color}
+                className={
+                  selected.customColor && selected.color.toLowerCase() === color
+                    ? 'active'
+                    : ''
+                }
+                style={{ background: color }}
+                aria-label={`Couleur ${color}`}
+                onClick={() => onChange({ color, customColor: true })}
+              />
+            ))}
+          </div>
+          <label className="text-editor-field">
+            <span>
+              <RotateCw size={13} /> Rotation ({Math.round(selected.rotation)}°)
+            </span>
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              value={selected.rotation}
+              onChange={(event) =>
+                onChange({ rotation: Number(event.target.value) })
+              }
+            />
+          </label>
           <div className="text-editor-row">
             <label className="text-editor-field">
               <span>X dans l’étape</span>

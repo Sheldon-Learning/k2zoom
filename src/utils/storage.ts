@@ -77,6 +77,8 @@ export function parsePresentation(json: string): Presentation {
         isBox(element) &&
         (element.type === 'text'
           ? typeof element.text === 'string' &&
+            (element.frameId === undefined ||
+              typeof element.frameId === 'string') &&
             ['eyebrow', 'heading', 'body', 'stat'].includes(
               String(element.variant),
             ) &&
@@ -88,11 +90,17 @@ export function parsePresentation(json: string): Presentation {
                 'Georgia',
                 'Arial',
                 'Courier New',
+                'Impact',
+                'Arial Black',
               ].includes(String(element.fontFamily))) &&
             (element.fontSize === undefined ||
               (isNumber(element.fontSize) &&
                 element.fontSize >= 10 &&
-                element.fontSize <= 120))
+                element.fontSize <= 240)) &&
+            (element.effect === undefined ||
+              ['plain', 'video', 'shadow'].includes(String(element.effect))) &&
+            (element.customColor === undefined ||
+              typeof element.customColor === 'boolean')
           : element.type === 'shape'
             ? ['circle', 'rect'].includes(String(element.shape)) &&
               typeof element.fill === 'string'

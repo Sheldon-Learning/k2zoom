@@ -66,8 +66,12 @@ describe('presentation JSON', () => {
           ? {
               ...element,
               text: 'Mon titre',
-              fontFamily: 'Georgia',
-              fontSize: 72,
+              fontFamily: 'Impact',
+              fontSize: 160,
+              effect: 'video',
+              customColor: true,
+              color: '#ffbf18',
+              rotation: 35,
             }
           : element,
       ),
@@ -82,5 +86,14 @@ describe('presentation JSON', () => {
       ),
     }
     expect(() => parsePresentation(JSON.stringify(invalid))).toThrow()
+    const invalidEffect = {
+      ...edited,
+      elements: edited.elements.map((element) =>
+        element.id === 'intro-heading'
+          ? { ...element, effect: 'unknown' }
+          : element,
+      ),
+    }
+    expect(() => parsePresentation(JSON.stringify(invalidEffect))).toThrow()
   })
 })

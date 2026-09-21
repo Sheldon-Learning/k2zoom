@@ -89,10 +89,13 @@ export default function App() {
     (element): element is TextElement =>
       element.type === 'text' &&
       !!currentFrame &&
-      ((element.x >= currentFrame.x - 30 &&
-        element.x <= currentFrame.x + currentFrame.width + 30 &&
-        element.y >= currentFrame.y - 30 &&
-        element.y <= currentFrame.y + currentFrame.height + 160) ||
+      ((element.frameId
+        ? element.frameId === currentFrame.id
+        : element.id === `${currentFrame.id}-caption` ||
+          (element.x >= currentFrame.x - 30 &&
+            element.x <= currentFrame.x + currentFrame.width + 30 &&
+            element.y >= currentFrame.y - 30 &&
+            element.y <= currentFrame.y + currentFrame.height + 160)) ||
         element.id === selectedTextId),
   )
 
@@ -119,16 +122,16 @@ export default function App() {
     })
   }
 
-  function updateText(changes: Partial<TextElement>) {
-    if (!selectedTextId) return
-    const captionFrame = presentation.frames.find(
-      (frame) => selectedTextId === `${frame.id}-caption`,
+  function updateTextById(id: string, changes: Partial<TextElement>) {
+    const latest = usePresentationStore.getState().presentation
+    const captionFrame = latest.frames.find(
+      (frame) => id === `${frame.id}-caption`,
     )
     replace({
-      ...presentation,
+      ...latest,
       frames:
         captionFrame && changes.text !== undefined
-          ? presentation.frames.map((frame) =>
+          ? latest.frames.map((frame) =>
               frame.id === captionFrame.id
                 ? {
                     ...frame,
@@ -136,9 +139,9 @@ export default function App() {
                   }
                 : frame,
             )
-          : presentation.frames,
-      elements: presentation.elements.map((element) =>
-        element.id === selectedTextId && element.type === 'text'
+          : latest.frames,
+      elements: latest.elements.map((element) =>
+        element.id === id && element.type === 'text'
           ? { ...element, ...changes }
           : captionFrame &&
               changes.text !== undefined &&
@@ -150,20 +153,32 @@ export default function App() {
     })
   }
 
-  function addText() {
+  function updateText(changes: Partial<TextElement>) {
+    if (selectedTextId) updateTextById(selectedTextId, changes)
+  }
+
+  function addText(kind: 'body' | 'heading' = 'body') {
     if (!currentFrame) return
+    const title = kind === 'heading'
     const element: TextElement = {
       id: `text-${crypto.randomUUID()}`,
       type: 'text',
-      variant: 'body',
-      text: 'Votre texte',
-      color: '#5e7281',
-      fontFamily: 'DM Sans',
-      fontSize: 21,
-      x: currentFrame.x + 32,
-      y: currentFrame.y + currentFrame.height + 34,
-      width: Math.min(currentFrame.width - 64, 480),
-      height: 90,
+      frameId: currentFrame.id,
+      variant: title ? 'heading' : 'body',
+      text: title ? 'VOTRE TITRE' : 'Votre texte',
+      color: title ? '#ffffff' : '#5e7281',
+      customColor: title,
+      fontFamily: title ? 'Impact' : 'DM Sans',
+      fontSize: title ? 100 : 21,
+      effect: title ? 'video' : 'plain',
+      x: currentFrame.x + (title ? 25 : 32),
+      y: title
+        ? currentFrame.y + 80
+        : currentFrame.y + currentFrame.height + 34,
+      width: title
+        ? currentFrame.width - 50
+        : Math.min(currentFrame.width - 64, 480),
+      height: title ? 230 : 90,
       rotation: 0,
     }
     replace({ ...presentation, elements: [...presentation.elements, element] })
@@ -172,12 +187,14 @@ export default function App() {
   }
 
   function selectText(element: TextElement) {
-    const frameIndex = pathFrames.findIndex(
-      (frame) =>
-        element.x >= frame.x - 30 &&
-        element.x <= frame.x + frame.width + 30 &&
-        element.y >= frame.y - 30 &&
-        element.y <= frame.y + frame.height + 160,
+    const frameIndex = pathFrames.findIndex((frame) =>
+      element.frameId
+        ? frame.id === element.frameId
+        : element.id === `${frame.id}-caption` ||
+          (element.x >= frame.x - 30 &&
+            element.x <= frame.x + frame.width + 30 &&
+            element.y >= frame.y - 30 &&
+            element.y <= frame.y + frame.height + 160),
     )
     if (frameIndex >= 0) setActiveFrame(frameIndex)
     setSelectedTextId(element.id)
@@ -592,6 +609,7 @@ export default function App() {
           viewportRef={viewportRef}
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
           onSelectText={!cleanMode ? selectText : undefined}
+          onUpdateText={!cleanMode ? updateTextById : undefined}
         />
       </main>
       {!presenting && cleanMode && (
@@ -673,7 +691,8 @@ export default function App() {
           onSelect={setSelectedTextId}
           onTitleChange={updateFrameTitle}
           onChange={updateText}
-          onAdd={addText}
+          onAdd={() => addText()}
+          onAddTitle={() => addText('heading')}
           onDelete={() => {
             replace({
               ...presentation,

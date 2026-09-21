@@ -363,6 +363,7 @@ export function buildVisualPresentation(
   const nextElementIds = new Set(next.elements.map((element) => element.id))
   const transferred = oldTexts.flatMap((text) => {
     const oldFrame =
+      previous.frames.find((frame) => frame.id === text.frameId) ??
       previous.frames.find((frame) => text.id === `${frame.id}-caption`) ??
       [...previous.frames].sort(
         (a, b) =>

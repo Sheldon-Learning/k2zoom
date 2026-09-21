@@ -63,6 +63,8 @@ Click the Zoomet logo to hide the top bar, sidebar, and presentation path and ex
 
 Use **Texte** in the top bar or **Modifier le texte** in the sidebar to rename the active step, add a text block, or edit its font, size, and position. Click an existing text block on the canvas to edit it directly. Changes are saved with the presentation in local storage and included in JSON exports.
 
+Drag a text block to place it anywhere on the canvas. Select it and drag the round handle to rotate it, or use the rotation slider in **Texte**. **Titre XXL** creates a large video-style heading with a dark outline. The editor also offers font sizes up to 240 px, colors, and shadow effects.
+
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
 
 Paste a YouTube watch, share, Shorts, or embed URL through **Ajouter une vidéo**. The new frame appears at the end of the current path, including the Classic story. Select it and press **Lire** on the video card to load the player. Playback is available in both editor and presentation mode; moving to another frame unloads the player. A video must permit embedding on third-party sites to play here.
