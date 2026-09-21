@@ -31,6 +31,7 @@ input:focus-visible {
   outline-offset: 3px;
 }
 .app {
+  position: relative;
   display: grid;
   grid-template-columns: 226px minmax(0, 1fr);
   grid-template-rows: 66px minmax(0, 1fr) 202px;
@@ -61,6 +62,16 @@ input:focus-visible {
   font-weight: 800;
   letter-spacing: -1.3px;
   white-space: nowrap;
+}
+.brand-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.brand-button:hover .brand-dot {
+  color: var(--accent);
 }
 .brand-dot {
   color: #69bfa7;
@@ -786,6 +797,35 @@ input:focus-visible {
   display: block;
   min-height: 0;
   background: #f7f9f7;
+}
+.is-clean {
+  display: block;
+  min-height: 0;
+}
+.is-clean .canvas-area {
+  position: absolute;
+  inset: 0;
+}
+.is-clean .canvas-hint,
+.is-clean .zoom-controls {
+  display: none;
+}
+.app.is-clean .clean-toggle {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 6;
+  width: auto;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 18px;
+  box-shadow: 0 8px 24px #0003;
+}
+.app.is-clean .clean-toggle:hover {
+  background: var(--surface-raised);
 }
 .is-presenting .canvas-area {
   position: absolute;

@@ -53,6 +53,7 @@ export default function App() {
   const [showMenu, setShowMenu] = useState(false)
   const [showStyles, setShowStyles] = useState(false)
   const [showVideoDialog, setShowVideoDialog] = useState(false)
+  const [cleanMode, setCleanMode] = useState(false)
 
   const controller = useMemo(
     () =>
@@ -222,6 +223,7 @@ export default function App() {
       if (event.key === 'Escape') {
         stopPresentation()
         setShowHelp(false)
+        setCleanMode(false)
         return
       }
       if (
@@ -293,21 +295,30 @@ export default function App() {
 
   return (
     <div
-      className={`app ${presenting ? 'is-presenting' : ''}`}
+      className={`app ${presenting ? 'is-presenting' : cleanMode ? 'is-clean' : ''}`}
       data-theme={theme}
       ref={rootRef}
     >
-      {!presenting && (
+      {!presenting && !cleanMode && (
         <>
           <header className="topbar">
-            <div className="brand">
+            <button
+              className="brand brand-button"
+              type="button"
+              onClick={() => {
+                setShowMenu(false)
+                setCleanMode(true)
+              }}
+              aria-label="Masquer les panneaux et agrandir le canvas"
+              title="Masquer les panneaux"
+            >
               <span className="brand-mark">
                 <span />
               </span>
               <span>
                 zoomet<span className="brand-dot">.</span>
               </span>
-            </div>
+            </button>
             <div className="topbar-divider" />
             <div className="document-name">
               <input
@@ -452,7 +463,23 @@ export default function App() {
           viewportRef={viewportRef}
         />
       </main>
-      {!presenting && (
+      {!presenting && cleanMode && (
+        <button
+          className="brand brand-button clean-toggle"
+          type="button"
+          onClick={() => setCleanMode(false)}
+          aria-label="Réafficher les panneaux"
+          title="Réafficher les panneaux"
+        >
+          <span className="brand-mark">
+            <span />
+          </span>
+          <span>
+            zoomet<span className="brand-dot">.</span>
+          </span>
+        </button>
+      )}
+      {!presenting && !cleanMode && (
         <footer className="timeline">
           <div className="timeline-heading">
             <div>
