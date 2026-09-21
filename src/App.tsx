@@ -720,7 +720,7 @@ export default function App() {
               className="button button-light images-top-button"
               onClick={() => imageRef.current?.click()}
             >
-              <Images size={16} /> Images
+              <Images size={16} /> Images+
             </button>
             <button
               className="button button-light text-top-button"
@@ -729,12 +729,12 @@ export default function App() {
               <Type size={16} /> Texte
             </button>
             <button
-              className="icon-button video-top-button"
+              className="button button-light video-top-button"
               aria-label="Ajouter une vidéo YouTube"
               title="Ajouter une vidéo YouTube"
               onClick={() => setShowVideoDialog(true)}
             >
-              <Video size={19} />
+              <Video size={17} /> <span>Vidéos+</span>
             </button>
             <ThemeSwitcher />
             <button
@@ -746,7 +746,7 @@ export default function App() {
             </button>
             <div className="menu-wrap">
               <button
-                className="button button-light"
+                className="button button-light file-top-button"
                 onClick={() => setShowMenu(!showMenu)}
                 aria-expanded={showMenu}
               >
@@ -767,7 +767,7 @@ export default function App() {
               )}
             </div>
             <button
-              className="button button-primary"
+              className="button button-primary present-top-button"
               onClick={() => void startPresentation()}
             >
               <Play size={15} fill="currentColor" /> Present
@@ -783,26 +783,25 @@ export default function App() {
               className="sidebar-item sidebar-action"
               onClick={() => setShowStyles(true)}
             >
-              <LayoutTemplate size={18} /> Styles de parcours{' '}
-              <ArrowRight size={14} />
+              <LayoutTemplate size={18} /> Styles <ArrowRight size={14} />
             </button>
             <button
               className="sidebar-item sidebar-action"
               onClick={() => imageRef.current?.click()}
             >
-              <Images size={18} /> Ajouter des images <ArrowRight size={14} />
+              <Images size={18} /> Images+ <ArrowRight size={14} />
             </button>
             <button
               className="sidebar-item sidebar-action"
               onClick={() => setShowVideoDialog(true)}
             >
-              <Video size={18} /> Ajouter une vidéo <ArrowRight size={14} />
+              <Video size={18} /> Vidéos+ <ArrowRight size={14} />
             </button>
             <button
               className="sidebar-item sidebar-action"
               onClick={() => setShowTextEditor(true)}
             >
-              <Type size={18} /> Modifier le texte <ArrowRight size={14} />
+              <Type size={18} /> Texte <ArrowRight size={14} />
             </button>
             <div className="sidebar-separator" />
             <div className="sidebar-section-label">

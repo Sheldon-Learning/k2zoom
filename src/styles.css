@@ -24,6 +24,11 @@ input {
 }
 button {
   cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
 }
 button:focus-visible,
 input:focus-visible {
@@ -33,8 +38,8 @@ input:focus-visible {
 .app {
   position: relative;
   display: grid;
-  grid-template-columns: 226px minmax(0, 1fr);
-  grid-template-rows: 66px minmax(0, 1fr) 202px;
+  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-rows: 72px minmax(0, 1fr) 202px;
   width: 100%;
   height: 100%;
   min-height: 550px;
@@ -46,8 +51,8 @@ input:focus-visible {
   grid-row: 1;
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 0 24px;
+  gap: 12px;
+  padding: 0 20px;
   background: #fff;
   border-bottom: 1px solid #e9edeb;
   z-index: 5;
@@ -64,9 +69,10 @@ input:focus-visible {
   white-space: nowrap;
 }
 .brand-button {
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: 7px 10px;
+  border: 1px solid var(--control-line);
+  border-radius: 12px;
+  background: var(--surface-raised);
   color: inherit;
   text-align: left;
 }
@@ -147,31 +153,33 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 0;
-  border-radius: 8px;
-  height: 35px;
+  border: 1px solid var(--control-line);
+  border-radius: 11px;
+  height: 39px;
   font-size: 12px;
   font-weight: 700;
+  box-shadow: 0 1px 3px #00000012;
 }
 .icon-button {
-  width: 35px;
+  width: 39px;
   color: #71817f;
-  background: transparent;
+  background: var(--surface-raised);
 }
 .icon-button:hover,
 .button-light:hover {
   background: #f1f5f3;
 }
 .button-light {
-  padding: 0 12px;
+  padding: 0 13px;
   color: #334a4c;
-  background: #fff;
-  border: 1px solid #e6ebe9;
+  background: var(--surface-raised);
+  border-color: var(--control-line);
 }
 .button-primary {
   padding: 0 17px;
   color: #fff;
   background: #183f43;
+  border-color: #35756d;
   box-shadow: 0 3px 8px #17444122;
 }
 .button-primary:hover {
@@ -183,12 +191,12 @@ input:focus-visible {
 .dropdown {
   position: absolute;
   right: 0;
-  top: 42px;
-  width: 170px;
-  padding: 5px;
+  top: 46px;
+  width: 190px;
+  padding: 7px;
   background: #fff;
-  border: 1px solid #e6ece9;
-  border-radius: 10px;
+  border: 1px solid var(--control-line);
+  border-radius: 14px;
   box-shadow: 0 12px 30px #183f4320;
   z-index: 10;
 }
@@ -197,10 +205,11 @@ input:focus-visible {
   gap: 9px;
   align-items: center;
   width: 100%;
-  border: 0;
-  border-radius: 6px;
-  padding: 10px;
-  background: transparent;
+  border: 1px solid var(--control-line);
+  border-radius: 10px;
+  padding: 10px 11px;
+  margin-bottom: 5px;
+  background: var(--surface-raised);
   color: #34494c;
   text-align: left;
   font-size: 12px;
@@ -218,18 +227,20 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 30px 14px 15px;
+  padding: 26px 16px 17px;
   background: #fff;
   border-right: 1px solid #e9edeb;
   z-index: 2;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-line) transparent;
 }
 .sidebar-action {
   width: 100%;
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--control-line);
+  background: var(--surface-raised);
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
 }
 .sidebar-action:hover {
   background: #f2f7f4;
@@ -242,7 +253,7 @@ input:focus-visible {
 .sidebar-section-label {
   display: flex;
   justify-content: space-between;
-  margin: 0 13px 14px;
+  margin: 0 13px 16px;
   color: #a3aeaa;
   font-size: 10px;
   letter-spacing: 1.5px;
@@ -255,15 +266,20 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 40px;
-  padding: 0 13px;
-  border-radius: 8px;
+  min-height: 47px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--control-line);
+  border-radius: 12px;
+  background: var(--surface-raised);
   color: #536765;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 .sidebar-item.selected {
   background: #eaf5f1;
+  border-color: var(--accent);
   color: #206754;
 }
 .sidebar-indicator {
@@ -275,25 +291,25 @@ input:focus-visible {
 }
 .sidebar-separator {
   height: 1px;
-  margin: 26px 12px 27px;
+  margin: 21px 12px 25px;
   background: #edf0ed;
 }
 .sidebar-frames {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 .sidebar-frame {
   display: flex;
   align-items: center;
   gap: 11px;
   width: 100%;
-  height: 43px;
-  border: 0;
-  border-radius: 8px;
+  min-height: 44px;
+  border: 1px solid var(--control-line);
+  border-radius: 11px;
   padding: 0 12px;
   color: #667875;
-  background: transparent;
+  background: var(--surface-raised);
   text-align: left;
   font-size: 12px;
   font-weight: 600;
@@ -304,6 +320,7 @@ input:focus-visible {
 .sidebar-frame.active {
   color: #173e41;
   background: #f3f8f5;
+  border-color: var(--accent);
 }
 .frame-number {
   color: #9baaa6;
@@ -733,7 +750,7 @@ input:focus-visible {
 .canvas-top-label {
   position: absolute;
   top: 84px;
-  left: 250px;
+  left: 278px;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -864,6 +881,8 @@ input:focus-visible {
   gap: 12px;
   overflow: auto;
   padding: 0 2px 5px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-line) transparent;
 }
 .timeline-item {
   position: relative;
@@ -993,6 +1012,8 @@ input:focus-visible {
   width: 325px;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-line) transparent;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1236,6 +1257,8 @@ input:focus-visible {
   flex-direction: column;
   padding: 32px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-line) transparent;
   border-radius: 19px;
   background: #fff;
   box-shadow: 0 25px 70px #0e333344;
@@ -1530,6 +1553,7 @@ input:focus-visible {
   --muted: #617b7a;
   --subtle: #8ea49e;
   --line: #e5ece8;
+  --control-line: #a9bdb6;
   --accent: #286e59;
   --accent-soft: #e9f5ef;
   --canvas-background: linear-gradient(
@@ -1552,6 +1576,7 @@ input:focus-visible {
   --muted: #b2c6c8;
   --subtle: #91aaad;
   --line: #30464e;
+  --control-line: #5d767e;
   --accent: #9bdfc3;
   --accent-soft: #28483f;
   --canvas-background: linear-gradient(
@@ -1574,6 +1599,7 @@ input:focus-visible {
   --muted: #d0d5d4;
   --subtle: #9da5a3;
   --line: #2c3031;
+  --control-line: #555d5f;
   --accent: #e0ece7;
   --accent-soft: #252b29;
   --canvas-background: #000000;
@@ -1591,6 +1617,7 @@ input:focus-visible {
   --muted: #bed3ec;
   --subtle: #a6c2e0;
   --line: #31557f;
+  --control-line: #668cb7;
   --accent: #b9dcff;
   --accent-soft: #205080;
   --canvas-background: linear-gradient(
@@ -1667,17 +1694,19 @@ input:focus-visible {
 .app[data-theme] .shortcuts kbd,
 .app[data-theme] .modal-close {
   background: var(--surface-raised);
-  border-color: var(--line);
+  border-color: var(--control-line);
   color: var(--foreground);
 }
 .app[data-theme] .button-primary,
 .app[data-theme] .presentation-controls {
   background: var(--accent-soft);
   color: var(--foreground);
+  border-color: var(--control-line);
 }
 .app[data-theme='light'] .button-primary {
   background: #183f43;
   color: #fff;
+  border-color: #367c70;
 }
 .app[data-theme] .button-light:hover,
 .app[data-theme] .icon-button:hover,
@@ -1844,6 +1873,151 @@ input:focus-visible {
   margin-left: auto;
   color: var(--accent);
 }
+
+/* Calm, bordered controls across the editor and all four themes. */
+.app[data-theme] .brand-button,
+.app[data-theme] .icon-button,
+.app[data-theme] .sidebar-action,
+.app[data-theme] .sidebar-frame,
+.app[data-theme] .dropdown button,
+.app[data-theme] .theme-menu button,
+.app[data-theme] .zoom-controls button,
+.app[data-theme] .timeline-item,
+.app[data-theme] .text-editor-heading button,
+.app[data-theme] .text-editor-section button,
+.app[data-theme] .text-editor-list button,
+.app[data-theme] .presentation-controls button,
+.app[data-theme] .modal-close,
+.app[data-theme] .style-card,
+.app[data-theme] .video-poster {
+  border: 1px solid var(--control-line);
+  box-shadow: 0 1px 3px #00000016;
+}
+.app[data-theme] .brand-button,
+.app[data-theme] .sidebar-action,
+.app[data-theme] .sidebar-frame,
+.app[data-theme] .dropdown button,
+.app[data-theme] .theme-menu button,
+.app[data-theme] .zoom-controls button,
+.app[data-theme] .timeline-item,
+.app[data-theme] .text-editor-list button {
+  background: var(--surface-raised);
+}
+.app[data-theme] .brand-button:hover,
+.app[data-theme] .sidebar-action:hover,
+.app[data-theme] .sidebar-frame:hover,
+.app[data-theme] .timeline-item:hover,
+.app[data-theme] .text-editor-list button:hover,
+.app[data-theme] .style-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 3px 10px #0000001c;
+}
+.app[data-theme] .sidebar-item.selected,
+.app[data-theme] .sidebar-frame.active,
+.app[data-theme] .timeline-item.active,
+.app[data-theme] .text-editor-list button.active,
+.app[data-theme] .style-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.app[data-theme] .sidebar-tip {
+  border: 1px solid var(--control-line);
+}
+.app[data-theme] .dropdown button:last-child {
+  margin-bottom: 0;
+}
+.app[data-theme] .theme-menu button {
+  min-height: 43px;
+  margin-bottom: 5px;
+  padding: 7px 9px;
+  border-radius: 10px;
+}
+.app[data-theme] .theme-menu button:last-child {
+  margin-bottom: 0;
+}
+.app[data-theme] .theme-menu button[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.app[data-theme] .zoom-controls {
+  height: 45px;
+  padding: 4px;
+  border-radius: 12px;
+}
+.app[data-theme] .zoom-controls button {
+  width: 35px;
+  height: 35px;
+  border-radius: 9px;
+}
+.app[data-theme] .timeline-item {
+  min-width: 165px;
+  padding: 6px;
+  border-radius: 12px;
+}
+.app[data-theme] .timeline-preview {
+  border-color: var(--control-line);
+  border-radius: 9px;
+}
+.app[data-theme] .text-editor-heading button,
+.app[data-theme] .text-editor-section button {
+  min-height: 32px;
+  padding: 6px 9px;
+  border-radius: 9px;
+}
+.app[data-theme] .text-editor-list button {
+  padding: 8px 10px;
+  border-radius: 9px;
+}
+.app[data-theme] .text-editor-colors button {
+  border-color: var(--control-line);
+}
+.app[data-theme] .text-editor-delete {
+  padding: 8px 12px;
+  border: 1px solid #c8757f;
+  border-radius: 9px;
+  background: #a83b451c;
+  color: #e27781;
+}
+.app[data-theme] .presentation-controls button {
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+.app[data-theme] .style-card {
+  border-radius: 14px;
+}
+.app[data-theme] .video-poster {
+  border-radius: 13px;
+}
+.app[data-theme] .button:focus-visible,
+.app[data-theme] .icon-button:focus-visible,
+.app[data-theme] .sidebar-action:focus-visible,
+.app[data-theme] .sidebar-frame:focus-visible,
+.app[data-theme] .timeline-item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 1250px) {
+  .topbar {
+    gap: 8px;
+    padding: 0 13px;
+  }
+  .brand {
+    width: 155px;
+  }
+  .document-name input {
+    width: 145px;
+  }
+  .save-state {
+    display: none;
+  }
+  .video-top-button {
+    width: 39px;
+    padding: 0;
+  }
+  .video-top-button span {
+    display: none;
+  }
+}
 @media (max-width: 800px) {
   .app {
     grid-template-columns: 0 minmax(0, 1fr);
@@ -1854,7 +2028,7 @@ input:focus-visible {
   }
   .topbar {
     padding: 0 13px;
-    gap: 9px;
+    gap: 6px;
   }
   .brand {
     width: auto;
@@ -1870,7 +2044,7 @@ input:focus-visible {
     display: none;
   }
   .document-name input {
-    width: min(25vw, 160px);
+    width: min(20vw, 120px);
   }
   .canvas-top-label {
     left: 20px;
@@ -1894,6 +2068,17 @@ input:focus-visible {
     font-size: 57px;
   }
 }
+@media (max-width: 650px) {
+  .document-name {
+    display: none;
+  }
+  .file-top-button,
+  .present-top-button {
+    width: 39px;
+    padding: 0;
+    font-size: 0;
+  }
+}
 @media (max-width: 520px) {
   .app {
     grid-template-rows: 54px minmax(0, 1fr) 153px;
@@ -1908,21 +2093,25 @@ input:focus-visible {
     width: 29px;
     height: 29px;
   }
-  .document-name input {
-    width: 31vw;
-    font-size: 11px;
-  }
   .button-light {
     display: none;
   }
-  .styles-top-button {
+  .styles-top-button,
+  .images-top-button,
+  .text-top-button,
+  .video-top-button,
+  .file-top-button {
     display: inline-flex;
-    padding: 0 9px;
-  }
-  .text-top-button {
-    display: inline-flex;
-    padding: 0 9px;
+    justify-content: center;
+    width: 37px;
+    height: 37px;
+    padding: 0;
     font-size: 0;
+  }
+  .icon-button,
+  .present-top-button {
+    width: 37px;
+    height: 37px;
   }
   .text-editor {
     top: 62px;
@@ -1952,6 +2141,9 @@ input:focus-visible {
   .button-primary {
     padding: 0 11px;
   }
+  .present-top-button {
+    padding: 0;
+  }
   .timeline-heading {
     margin-bottom: 0;
   }
@@ -1974,6 +2166,25 @@ input:focus-visible {
   .zoom-controls {
     right: 12px;
     bottom: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .topbar {
+    gap: 3px;
+    padding: 0 6px;
+  }
+  .brand-button {
+    padding: 5px;
+  }
+  .styles-top-button,
+  .images-top-button,
+  .text-top-button,
+  .video-top-button,
+  .file-top-button,
+  .icon-button,
+  .present-top-button {
+    width: 33px;
+    height: 33px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
