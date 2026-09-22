@@ -52,6 +52,26 @@ export class CameraController {
   focusOn(frame: Frame, duration = 850): void {
     this.animate(cameraForFrame(frame, this.getViewport()), duration)
   }
+  focusViaOverview(frame: Frame, frames: Frame[], duration = 850): void {
+    const viewport = this.getViewport()
+    const target = cameraForFrame(frame, viewport)
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    if (reduced) {
+      this.transitions.cancel()
+      this.setCamera({ ...target, rotation: 0 })
+      return
+    }
+    const overview = fitCamera(frames, viewport)
+    this.transitions.animate(
+      this.getCamera(),
+      overview,
+      280,
+      this.setCamera,
+      () => this.transitions.animate(overview, target, duration, this.setCamera),
+    )
+  }
   focusOnMedia(image: ImageElement | VideoElement, duration = 550): void {
     this.animate(
       cameraForMedia(image, this.getCamera(), this.getViewport()),

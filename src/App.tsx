@@ -727,7 +727,10 @@ export default function App() {
     window.setTimeout(() => setMessage(''), 4000)
   }
 
-  function focus(index: number) {
+  function focus(
+    index: number,
+    viaOverview = useEditorStore.getState().presenting,
+  ) {
     const frame = pathFrames[index]
     if (!frame) return
     setActiveFrame(index)
@@ -735,10 +738,15 @@ export default function App() {
     setNavigationHistory((history) => [...history, frame.id])
     setSelectedElementId(null)
     setSelectedElementId(null)
-    controller.focusOn(frame, frame.duration)
+    if (viaOverview)
+      controller.focusViaOverview(frame, pathFrames, frame.duration)
+    else controller.focusOn(frame, frame.duration)
   }
 
-  function focusSlide(id: string) {
+  function focusSlide(
+    id: string,
+    viaOverview = useEditorStore.getState().presenting,
+  ) {
     const frame = presentation.frames.find((item) => item.id === id)
     if (!frame) return
     const root = ancestorsOf(presentation, id)[0] ?? frame
@@ -749,7 +757,12 @@ export default function App() {
     setSelectedElementId(null)
     setSelectedElementId(null)
     setNumberMenuFrameId(null)
-    controller.focusOn(frame, frame.duration)
+    const destinationFrames = frame.parentId
+      ? childrenOf(presentation, frame.parentId)
+      : pathFrames
+    if (viaOverview)
+      controller.focusViaOverview(frame, destinationFrames, frame.duration)
+    else controller.focusOn(frame, frame.duration)
   }
 
   function exploreSlide(id: string) {
@@ -758,7 +771,7 @@ export default function App() {
   }
 
   function handleSlideNumberClick(id: string) {
-    if (presenting) exploreSlide(id)
+    if (presenting || cleanMode) exploreSlide(id)
     else setNumberMenuFrameId(id)
   }
 
@@ -771,9 +784,12 @@ export default function App() {
     }
   }
 
-  function navigateSibling(delta: number) {
+  function navigateSibling(
+    delta: number,
+    viaOverview = useEditorStore.getState().presenting || cleanMode,
+  ) {
     const next = activeSiblings[activeSiblingIndex + delta]
-    if (next) focusSlide(next.id)
+    if (next) focusSlide(next.id, viaOverview)
   }
 
   function returnToParent() {
@@ -860,8 +876,8 @@ export default function App() {
       /* Browser may deny fullscreen. */
     }
     requestAnimationFrame(() => {
-      if (startingNestedId) focusSlide(startingNestedId)
-      else focus(0)
+      if (startingNestedId) focusSlide(startingNestedId, false)
+      else focus(0, false)
     })
   }
 
@@ -911,7 +927,7 @@ export default function App() {
         showMenu
       )
         return
-      if (useEditorStore.getState().presenting) {
+      if (useEditorStore.getState().presenting || cleanMode) {
         if (
           (event.key === 'Enter' || event.key === ' ') &&
           event.target instanceof HTMLElement &&
@@ -926,10 +942,10 @@ export default function App() {
           navigateSibling(-1)
         } else if (event.key === 'Home') {
           event.preventDefault()
-          focus(0)
+          focus(0, true)
         } else if (event.key === 'End') {
           event.preventDefault()
-          focus(pathFrames.length - 1)
+          focus(pathFrames.length - 1, true)
         }
       } else {
         if (mod && key === 's') {
@@ -1226,6 +1242,7 @@ export default function App() {
               onClick={() => {
                 setShowMenu(false)
                 setShowTextEditor(false)
+                setSelectedElementId(null)
                 setCleanMode(true)
               }}
               aria-label="Masquer les panneaux et agrandir le canvas"

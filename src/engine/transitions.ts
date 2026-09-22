@@ -28,17 +28,23 @@ export class TransitionEngine {
     to: Camera,
     duration: number,
     update: (camera: Camera) => void,
+    onComplete?: () => void,
   ): void {
     this.cancel()
     if (duration <= 0) {
       update(to)
+      onComplete?.()
       return
     }
     const start = performance.now()
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration)
       update(interpolateCamera(from, to, progress))
-      this.frameId = progress < 1 ? requestAnimationFrame(tick) : null
+      if (progress < 1) this.frameId = requestAnimationFrame(tick)
+      else {
+        this.frameId = null
+        onComplete?.()
+      }
     }
     this.frameId = requestAnimationFrame(tick)
   }
