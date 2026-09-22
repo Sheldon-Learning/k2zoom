@@ -50,6 +50,7 @@ import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
 import { prepareImages } from './utils/images'
 import { createPresentationPdf } from './utils/pdfExport'
+import { importDocument } from './utils/documentImport'
 import type {
   Presentation,
   PresentationStyle,
@@ -70,6 +71,7 @@ export default function App() {
   const viewportRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const documentRef = useRef<HTMLInputElement>(null)
   const imageRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
   const [showHelp, setShowHelp] = useState(false)
@@ -81,6 +83,7 @@ export default function App() {
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [importBusy, setImportBusy] = useState(false)
   const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
   const [navigationHistory, setNavigationHistory] = useState<string[]>([])
   const [showStructure, setShowStructure] = useState(false)
@@ -910,6 +913,34 @@ export default function App() {
     window.setTimeout(() => setMessage(''), 3000)
   }
 
+  async function importFile(file?: File) {
+    if (!file || importBusy) return
+    setImportBusy(true)
+    setShowMenu(false)
+    setMessage('Préparation du document…')
+    try {
+      const imported = await importDocument(file, (page, total) =>
+        setMessage(`Import : page ${page} sur ${total}…`),
+      )
+      replace(imported)
+      setActiveFrame(0)
+      setActiveNestedId(null)
+      setSelectedTextId(null)
+      setSelectedImageId(null)
+      controller.focusOn(imported.frames[0], 0)
+      setMessage(`${imported.frames.length} slides créées depuis ${file.name}`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Impossible d’importer ce document.',
+      )
+    } finally {
+      setImportBusy(false)
+      window.setTimeout(() => setMessage(''), 6000)
+    }
+  }
+
   function renderTree(parentId?: string) {
     return childrenOf(presentation, parentId).map((frame) => (
       <div key={frame.id} className="structure-node">
@@ -1101,6 +1132,15 @@ export default function App() {
                   </button>
                   <button onClick={() => fileRef.current?.click()}>
                     <Upload size={16} /> Import JSON
+                  </button>
+                  <button
+                    onClick={() => documentRef.current?.click()}
+                    disabled={importBusy}
+                  >
+                    <Upload size={16} />{' '}
+                    {importBusy
+                      ? 'Import en cours…'
+                      : 'Importer PDF / PowerPoint'}
                   </button>
                 </div>
               )}
@@ -1590,6 +1630,16 @@ export default function App() {
         hidden
         onChange={(event) => {
           void importJSON(event.target.files?.[0])
+          event.target.value = ''
+        }}
+      />
+      <input
+        ref={documentRef}
+        type="file"
+        accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        hidden
+        onChange={(event) => {
+          void importFile(event.target.files?.[0])
           event.target.value = ''
         }}
       />
