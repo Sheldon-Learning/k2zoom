@@ -12,6 +12,7 @@ import {
   Maximize2,
   Images,
   Play,
+  Scan,
   Sparkles,
   Trash2,
   Type,
@@ -88,7 +89,9 @@ export default function App() {
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(
+    null,
+  )
   const [pdfBusy, setPdfBusy] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
@@ -729,7 +732,7 @@ export default function App() {
 
   function focus(
     index: number,
-    viaOverview = useEditorStore.getState().presenting,
+    viaOverview = useEditorStore.getState().presenting || cleanMode,
   ) {
     const frame = pathFrames[index]
     if (!frame) return
@@ -745,7 +748,7 @@ export default function App() {
 
   function focusSlide(
     id: string,
-    viaOverview = useEditorStore.getState().presenting,
+    viaOverview = useEditorStore.getState().presenting || cleanMode,
   ) {
     const frame = presentation.frames.find((item) => item.id === id)
     if (!frame) return
@@ -1622,7 +1625,9 @@ export default function App() {
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
           onSelectElement={!cleanMode ? selectCanvasElement : undefined}
-          onClearSelection={!cleanMode ? () => setSelectedElementId(null) : undefined}
+          onClearSelection={
+            !cleanMode ? () => setSelectedElementId(null) : undefined
+          }
           onExploreSlide={handleSlideNumberClick}
           onDoubleClickSlideNumber={handleSlideNumberDoubleClick}
         />
@@ -1766,11 +1771,15 @@ export default function App() {
           onClose={() => setShowTextEditor(false)}
         />
       )}
-      {presenting && (
-        <div className="presentation-controls">
+      {(presenting || cleanMode) && (
+        <div
+          className={`presentation-controls ${cleanMode ? 'clean-navigation-controls' : ''}`}
+        >
           <button
-            aria-label="Quitter la présentation"
-            onClick={stopPresentation}
+            aria-label={
+              presenting ? 'Quitter la présentation' : 'Quitter le mode kzoom'
+            }
+            onClick={presenting ? stopPresentation : () => setCleanMode(false)}
           >
             <X size={18} />
           </button>
@@ -1801,6 +1810,14 @@ export default function App() {
             }}
           >
             ↶
+          </button>
+          <button
+            type="button"
+            aria-label="Afficher l’ensemble des slides"
+            title="Vue d’ensemble"
+            onClick={() => controller.fitToScreen(visiblePresentation.frames)}
+          >
+            <Scan size={18} />
           </button>
           {currentFrame && currentFrame.numberVisible !== false && (
             <SlideNumber
