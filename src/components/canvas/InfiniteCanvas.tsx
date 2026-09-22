@@ -14,6 +14,8 @@ import type {
 } from '../../types/presentation'
 import { useEditorStore } from '../../store/editorStore'
 import { RouteOverlay } from './RouteOverlay'
+import { SlideNumber } from '../ui/SlideNumber'
+import { childrenOf, slideNumbers } from '../../engine/slideHierarchy'
 import { youtubeEmbedUrl } from '../../utils/youtube'
 
 interface Props {
@@ -27,6 +29,7 @@ interface Props {
   onDeleteText?: (id: string) => void
   onSelectImage?: (element: ImageElement) => void
   onUpdateImage?: (id: string, changes: Partial<ImageElement>) => void
+  onExploreSlide?: (id: string) => void
 }
 
 export function InfiniteCanvas({
@@ -40,7 +43,9 @@ export function InfiniteCanvas({
   onDeleteText,
   onSelectImage,
   onUpdateImage,
+  onExploreSlide,
 }: Props) {
+  const numbers = slideNumbers(presentation)
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
   const activeFrame = useEditorStore((state) => state.activeFrame)
@@ -435,6 +440,19 @@ export function InfiniteCanvas({
               } as React.CSSProperties
             }
           >
+            {frame.numberVisible !== false && numbers.has(frame.id) && (
+              <SlideNumber
+                className={`canvas-slide-number position-${frame.numberPosition ?? 'bottom-right'}`}
+                style={{
+                  transform: `scale(${frame.numberScale ?? 1})`,
+                  color: frame.numberColor ?? frame.accent,
+                }}
+                number={numbers.get(frame.id)!}
+                title={frame.name}
+                childCount={childrenOf(presentation, frame.id).length}
+                onExplore={() => onExploreSlide?.(frame.id)}
+              />
+            )}
             {!presenting && (
               <div className="frame-label">
                 <span>{String(index + 1).padStart(2, '0')}</span>

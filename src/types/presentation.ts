@@ -8,6 +8,13 @@ export interface Camera {
 export interface Frame {
   id: string
   name: string
+  parentId?: string
+  children?: string[]
+  hiddenFromMainPath?: boolean
+  numberVisible?: boolean
+  numberPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  numberScale?: number
+  numberColor?: string
   x: number
   y: number
   width: number

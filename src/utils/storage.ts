@@ -66,6 +66,7 @@ export function parsePresentation(json: string): Presentation {
         isNumber(frame.duration) &&
         frame.duration >= 0 &&
         typeof frame.accent === 'string',
+      // Optional hierarchy fields keep older JSON presentations valid.
     )
   ) {
     throw new Error('Invalid frames')
@@ -114,8 +115,71 @@ export function parsePresentation(json: string): Presentation {
   )
     throw new Error('Invalid elements')
   const frameIds = new Set(value.frames.map((frame) => frame.id))
+  if (frameIds.size !== value.frames.length)
+    throw new Error('Duplicate frame IDs')
   if (!value.path.every((id) => typeof id === 'string' && frameIds.has(id)))
     throw new Error('Invalid presentation path')
+  if (new Set(value.path).size !== value.path.length)
+    throw new Error('Duplicate path IDs')
+  const byId = new Map(value.frames.map((frame) => [frame.id, frame]))
+  for (const frame of value.frames) {
+    if (
+      frame.parentId !== undefined &&
+      (typeof frame.parentId !== 'string' || !frameIds.has(frame.parentId))
+    )
+      throw new Error('Invalid parent')
+    if (
+      frame.children !== undefined &&
+      (!Array.isArray(frame.children) ||
+        frame.children.some(
+          (id) =>
+            typeof id !== 'string' ||
+            !frameIds.has(id) ||
+            byId.get(id)?.parentId !== frame.id,
+        ) ||
+        new Set(frame.children).size !== frame.children.length)
+    )
+      throw new Error('Invalid children')
+    if (
+      frame.hiddenFromMainPath !== undefined &&
+      typeof frame.hiddenFromMainPath !== 'boolean'
+    )
+      throw new Error('Invalid visibility')
+    if (
+      frame.numberVisible !== undefined &&
+      typeof frame.numberVisible !== 'boolean'
+    )
+      throw new Error('Invalid slide number')
+    if (
+      frame.numberPosition !== undefined &&
+      !['top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(
+        frame.numberPosition,
+      )
+    )
+      throw new Error('Invalid number position')
+    if (
+      frame.numberScale !== undefined &&
+      (!isNumber(frame.numberScale) ||
+        frame.numberScale < 0.5 ||
+        frame.numberScale > 2)
+    )
+      throw new Error('Invalid number scale')
+    if (
+      frame.numberColor !== undefined &&
+      (typeof frame.numberColor !== 'string' ||
+        !/^#[0-9a-fA-F]{6}$/.test(frame.numberColor))
+    )
+      throw new Error('Invalid number color')
+    if (frame.parentId && value.path.includes(frame.id))
+      throw new Error('Nested frame in main path')
+    const seen = new Set<string>([frame.id])
+    let parent = frame.parentId
+    while (parent) {
+      if (seen.has(parent)) throw new Error('Cyclic slide hierarchy')
+      seen.add(parent)
+      parent = byId.get(parent)?.parentId
+    }
+  }
   return value as Presentation
 }
 

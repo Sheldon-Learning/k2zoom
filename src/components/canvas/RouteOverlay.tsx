@@ -39,14 +39,6 @@ export function RouteOverlay({ frames, style }: Props) {
       aria-hidden="true"
     >
       <defs>
-        <pattern
-          id="route-pixels"
-          width="22"
-          height="22"
-          patternUnits="userSpaceOnUse"
-        >
-          <rect x="1" y="1" width="3" height="3" rx=".5" fill="#7eaaa0" />
-        </pattern>
         <marker
           id="route-arrow"
           markerWidth="13"
@@ -65,14 +57,6 @@ export function RouteOverlay({ frames, style }: Props) {
           />
         </marker>
       </defs>
-      {style === 'grid' && (
-        <rect
-          width={right - left}
-          height={bottom - top}
-          fill="url(#route-pixels)"
-          opacity=".35"
-        />
-      )}
       {style === 'orbit' ? (
         <circle
           cx={-left}

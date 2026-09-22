@@ -355,10 +355,66 @@ export function buildVisualPresentation(
     path: frames.map((frame) => frame.id),
     style,
   }
-  if (!previous || previous.style === 'story') return next
+  if (!previous) return next
+
+  const rootMap = new Map(
+    previous.path.map((id, index) => [id, next.path[index]]),
+  )
+  const oldById = new Map(previous.frames.map((frame) => [frame.id, frame]))
+  const nested = previous.frames.filter((frame) => !!frame.parentId)
+  const frameMap = new Map(next.frames.map((frame) => [frame.id, frame]))
+  previous.path.forEach((id, index) => {
+    const old = oldById.get(id)
+    const target = next.frames[index]
+    if (old && target) {
+      target.children = old.children
+      target.numberVisible = old.numberVisible
+    }
+  })
+  const pending = [...nested]
+  while (pending.length) {
+    const index = pending.findIndex(
+      (frame) =>
+        frame.parentId &&
+        frameMap.has(rootMap.get(frame.parentId) ?? frame.parentId),
+    )
+    if (index < 0) break
+    const old = pending.splice(index, 1)[0]
+    const oldParent = oldById.get(old.parentId!)!
+    const parentId = rootMap.get(old.parentId!) ?? old.parentId!
+    const parent = frameMap.get(parentId)!
+    const scaleX = parent.width / oldParent.width
+    const scaleY = parent.height / oldParent.height
+    const moved = {
+      ...old,
+      parentId,
+      x: parent.x + (old.x - oldParent.x) * scaleX,
+      y: parent.y + (old.y - oldParent.y) * scaleY,
+      width: old.width * scaleX,
+      height: old.height * scaleY,
+    }
+    next.frames.push(moved)
+    frameMap.set(moved.id, moved)
+  }
+  const nestedIds = new Set(nested.map((frame) => frame.id))
+  next.elements.push(
+    ...previous.elements.filter(
+      (element) =>
+        'frameId' in element &&
+        element.frameId &&
+        nestedIds.has(element.frameId),
+    ),
+  )
+  if (previous.style === 'story') return next
 
   const oldTexts = previous.elements.filter(
-    (element): element is TextElement => element.type === 'text',
+    (element): element is TextElement =>
+      element.type === 'text' &&
+      !(
+        'frameId' in element &&
+        element.frameId &&
+        nestedIds.has(element.frameId)
+      ),
   )
   const nextElementIds = new Set(next.elements.map((element) => element.id))
   const transferred = oldTexts.flatMap((text) => {

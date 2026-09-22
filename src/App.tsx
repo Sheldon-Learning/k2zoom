@@ -19,6 +19,16 @@ import {
   X,
 } from 'lucide-react'
 import { InfiniteCanvas } from './components/canvas/InfiniteCanvas'
+import { SlideNumber } from './components/ui/SlideNumber'
+import {
+  addNestedSlide,
+  ancestorsOf,
+  childrenOf,
+  deleteSlide,
+  duplicateSlide,
+  moveSlide,
+  slideNumbers,
+} from './engine/slideHierarchy'
 import { StylePicker } from './components/ui/StylePicker'
 import { TextEditor } from './components/ui/TextEditor'
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
@@ -31,6 +41,10 @@ import {
   galleryFromPresentation,
 } from './data/visualStyles'
 import { CameraController } from './engine/CameraController'
+import {
+  KeyboardShortcutManager,
+  isTypingTarget,
+} from './engine/KeyboardShortcutManager'
 import { useEditorStore } from './store/editorStore'
 import { usePresentationStore } from './store/presentationStore'
 import { parsePresentation } from './utils/storage'
@@ -67,6 +81,11 @@ export default function App() {
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([])
+  const [showStructure, setShowStructure] = useState(false)
+  const [draggedSlideId, setDraggedSlideId] = useState<string | null>(null)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const controller = useMemo(
     () =>
@@ -85,7 +104,19 @@ export default function App() {
     .map((id) => presentation.frames.find((frame) => frame.id === id))
     .filter((frame) => frame !== undefined)
   const gallery = galleryFromPresentation(presentation)
-  const currentFrame = pathFrames[activeFrame]
+  const currentFrame = activeNestedId
+    ? presentation.frames.find((frame) => frame.id === activeNestedId)
+    : pathFrames[activeFrame]
+  const numbers = slideNumbers(presentation)
+  const breadcrumbFrames = currentFrame
+    ? [...ancestorsOf(presentation, currentFrame.id), currentFrame]
+    : []
+  const activeSiblings = currentFrame?.parentId
+    ? childrenOf(presentation, currentFrame.parentId)
+    : pathFrames
+  const activeSiblingIndex = activeSiblings.findIndex(
+    (frame) => frame.id === currentFrame?.id,
+  )
   const selectedText = presentation.elements.find(
     (element): element is TextElement =>
       element.type === 'text' && element.id === selectedTextId,
@@ -207,6 +238,13 @@ export default function App() {
   }
 
   function selectText(element: TextElement) {
+    if (
+      element.frameId &&
+      presentation.frames.some(
+        (frame) => frame.id === element.frameId && frame.parentId,
+      )
+    )
+      setActiveNestedId(element.frameId)
     const frameIndex = pathFrames.findIndex((frame) =>
       element.frameId
         ? frame.id === element.frameId
@@ -334,20 +372,39 @@ export default function App() {
     const handleCopy = (event: ClipboardEvent) => {
       if (useEditorStore.getState().presenting || isEditingText(event.target))
         return
-      const image = usePresentationStore
+      const element = usePresentationStore
         .getState()
         .presentation.elements.find(
-          (element): element is ImageElement =>
-            element.id === selectedImageId && element.type === 'image',
+          (item) =>
+            item.id === (selectedImageId ?? selectedTextId) &&
+            (item.type === 'image' || item.type === 'text'),
         )
-      if (!image || !event.clipboardData) return
+      if (!element || !event.clipboardData) return
       event.clipboardData.setData(
-        'application/x-zoomet-image',
-        JSON.stringify(image),
+        'application/x-zoomet-element',
+        JSON.stringify(element),
       )
+      if (element.type === 'text')
+        event.clipboardData.setData('text/plain', element.text)
       event.preventDefault()
-      setMessage('Image copiée : utilisez Ctrl+V pour la coller')
+      setMessage('Élément copié')
       window.setTimeout(() => setMessage(''), 4500)
+    }
+    const handleCut = (event: ClipboardEvent) => {
+      if (useEditorStore.getState().presenting || isEditingText(event.target))
+        return
+      const id = selectedImageId ?? selectedTextId
+      if (!id) return
+      handleCopy(event)
+      const latest = usePresentationStore.getState().presentation
+      usePresentationStore
+        .getState()
+        .replace({
+          ...latest,
+          elements: latest.elements.filter((item) => item.id !== id),
+        })
+      setSelectedImageId(null)
+      setSelectedTextId(null)
     }
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target
@@ -359,15 +416,27 @@ export default function App() {
         .map((item) => item.getAsFile())
         .filter((file): file is File => file !== null)
       if (!files.length) {
-        const copied = event.clipboardData?.getData(
-          'application/x-zoomet-image',
-        )
+        const copied =
+          event.clipboardData?.getData('application/x-zoomet-element') ||
+          event.clipboardData?.getData('application/x-zoomet-image')
         if (!copied) return
         try {
-          const image = JSON.parse(copied) as ImageElement
-          if (image.type !== 'image' || typeof image.src !== 'string') return
+          const element = JSON.parse(copied) as ImageElement | TextElement
+          if (element.type !== 'image' && element.type !== 'text') return
           event.preventDefault()
-          pasteCopiedImage(image)
+          if (element.type === 'image') pasteCopiedImage(element)
+          else {
+            const latest = usePresentationStore.getState().presentation
+            const copy = {
+              ...element,
+              id: `text-${crypto.randomUUID()}`,
+              frameId: currentFrame?.id,
+              x: element.x + 24,
+              y: element.y + 24,
+            }
+            replace({ ...latest, elements: [...latest.elements, copy] })
+            setSelectedTextId(copy.id)
+          }
         } catch {
           setMessage('Impossible de coller cette image.')
         }
@@ -377,9 +446,11 @@ export default function App() {
       void pasteImages(files)
     }
     window.addEventListener('copy', handleCopy)
+    window.addEventListener('cut', handleCut)
     window.addEventListener('paste', handlePaste)
     return () => {
       window.removeEventListener('copy', handleCopy)
+      window.removeEventListener('cut', handleCut)
       window.removeEventListener('paste', handlePaste)
     }
   })
@@ -387,6 +458,7 @@ export default function App() {
   function chooseStyle(style: PresentationStyle) {
     if (
       style === 'story' &&
+      !presentation.frames.some((frame) => frame.parentId) &&
       gallery.some(
         (item) =>
           item.kind === 'video' || !item.alt.startsWith('Paysage illustré'),
@@ -408,7 +480,9 @@ export default function App() {
       return
     const next =
       style === 'story'
-        ? { ...demoPresentation, title: presentation.title }
+        ? presentation.frames.some((frame) => frame.parentId)
+          ? { ...presentation, style: 'story' as const }
+          : { ...demoPresentation, title: presentation.title }
         : buildVisualPresentation(
             style,
             gallery.length ? gallery : demoGallery,
@@ -417,6 +491,7 @@ export default function App() {
           )
     replace(next)
     setActiveFrame(0)
+    setActiveNestedId(null)
     controller.fitToScreen(next.frames, 650)
     setShowStyles(false)
   }
@@ -456,6 +531,7 @@ export default function App() {
       if (JSON.stringify(next).length > 3_500_000)
         throw new Error('Stockage local plein : utilisez moins d’images.')
       replace(next)
+      setActiveNestedId(null)
       if (story) {
         setActiveFrame(presentation.path.length)
         controller.focusOn(next.frames[presentation.frames.length], 650)
@@ -500,6 +576,7 @@ export default function App() {
           )
         : appendMediaToStory(presentation, [video])
     replace(next)
+    setActiveNestedId(null)
     setActiveFrame(next.frames.length - 1)
     controller.focusOn(next.frames.at(-1)!, 650)
     setShowVideoDialog(false)
@@ -511,9 +588,60 @@ export default function App() {
     const frame = pathFrames[index]
     if (!frame) return
     setActiveFrame(index)
+    setActiveNestedId(null)
+    setNavigationHistory((history) => [...history, frame.id])
     setSelectedTextId(null)
     setSelectedImageId(null)
     controller.focusOn(frame, frame.duration)
+  }
+
+  function focusSlide(id: string) {
+    const frame = presentation.frames.find((item) => item.id === id)
+    if (!frame) return
+    const root = ancestorsOf(presentation, id)[0] ?? frame
+    const rootIndex = pathFrames.findIndex((item) => item.id === root.id)
+    if (rootIndex >= 0) setActiveFrame(rootIndex)
+    setActiveNestedId(frame.parentId ? id : null)
+    setNavigationHistory((history) => [...history, id])
+    setSelectedTextId(null)
+    setSelectedImageId(null)
+    controller.focusOn(frame, frame.duration)
+  }
+
+  function exploreSlide(id: string) {
+    const first = childrenOf(presentation, id)[0]
+    if (first) focusSlide(first.id)
+  }
+
+  function navigateSibling(delta: number) {
+    const next = activeSiblings[activeSiblingIndex + delta]
+    if (next) focusSlide(next.id)
+  }
+
+  function returnToParent() {
+    if (currentFrame?.parentId) focusSlide(currentFrame.parentId)
+  }
+
+  function addChild(id: string) {
+    const next = addNestedSlide(presentation, id)
+    replace(next)
+    const child = next.frames.at(-1)
+    if (child) {
+      setActiveNestedId(child.id)
+      controller.focusOn(child)
+    }
+  }
+
+  function updateCurrentFrame(
+    changes: Partial<NonNullable<typeof currentFrame>>,
+  ) {
+    if (!currentFrame) return
+    replace({
+      ...presentation,
+      frames: presentation.frames.map((frame) =>
+        frame.id === currentFrame.id ? { ...frame, ...changes } : frame,
+      ),
+    })
   }
 
   async function startPresentation() {
@@ -535,65 +663,150 @@ export default function App() {
   }
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
+    return new KeyboardShortcutManager((event) => {
+      const key = event.key.toLowerCase()
+      const mod = event.ctrlKey || event.metaKey
       if (event.key === 'Escape') {
-        stopPresentation()
-        setShowHelp(false)
-        setCleanMode(false)
+        if (useEditorStore.getState().presenting) stopPresentation()
+        else if (
+          showHelp ||
+          showStyles ||
+          showVideoDialog ||
+          showTextEditor ||
+          showMenu
+        ) {
+          setShowHelp(false)
+          setShowStyles(false)
+          setShowVideoDialog(false)
+          setShowTextEditor(false)
+          setShowMenu(false)
+        } else {
+          setSelectedTextId(null)
+          setSelectedImageId(null)
+          setCleanMode(false)
+        }
         return
       }
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement ||
-        (event.target instanceof HTMLElement && event.target.isContentEditable)
-      )
-        return
-      if (
-        !useEditorStore.getState().presenting &&
-        !cleanMode &&
-        showTextEditor &&
-        selectedTextId &&
-        (event.key === 'Delete' || event.key === 'Backspace')
-      ) {
-        event.preventDefault()
-        deleteTextById(selectedTextId)
-        return
-      }
+      if (isTypingTarget(event.target)) return
+      if (showHelp || showStyles || showVideoDialog || showMenu) return
       if (useEditorStore.getState().presenting) {
         if (
-          event.key === 'ArrowRight' ||
-          event.key === ' ' ||
-          event.key === 'ArrowDown'
-        ) {
+          (event.key === 'Enter' || event.key === ' ') &&
+          event.target instanceof HTMLElement &&
+          event.target.closest('button')
+        )
+          return
+        if (['ArrowRight', 'ArrowDown', ' ', 'Enter'].includes(event.key)) {
           event.preventDefault()
-          const next = Math.min(
-            useEditorStore.getState().activeFrame + 1,
-            pathFrames.length - 1,
-          )
-          focus(next)
-        }
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+          navigateSibling(1)
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
           event.preventDefault()
-          focus(Math.max(0, useEditorStore.getState().activeFrame - 1))
+          navigateSibling(-1)
+        } else if (event.key === 'Home') {
+          event.preventDefault()
+          focus(0)
+        } else if (event.key === 'End') {
+          event.preventDefault()
+          focus(pathFrames.length - 1)
         }
       } else {
-        if (
-          event.key.toLowerCase() === 'p' &&
-          !event.metaKey &&
-          !event.ctrlKey
-        ) {
-          void startPresentation()
+        if (mod && key === 's') {
+          event.preventDefault()
+          if (event.shiftKey) exportJSON()
+          else usePresentationStore.getState().flush()
+          return
         }
-        if (event.key === '0') controller.fitToScreen(presentation.frames)
-        if (event.key === '+' || event.key === '=')
+        if (mod && key === 'z') {
+          event.preventDefault()
+          if (event.shiftKey) usePresentationStore.getState().redo()
+          else usePresentationStore.getState().undo()
+          return
+        }
+        if (mod && key === 'y') {
+          event.preventDefault()
+          usePresentationStore.getState().redo()
+          return
+        }
+        if (mod && key === 'd' && (selectedImageId || selectedTextId)) {
+          event.preventDefault()
+          const element = presentation.elements.find(
+            (item) => item.id === (selectedImageId ?? selectedTextId),
+          )
+          if (element) {
+            const copy = {
+              ...element,
+              id: `${element.type}-${crypto.randomUUID()}`,
+              x: element.x + 24,
+              y: element.y + 24,
+            }
+            replace({
+              ...presentation,
+              elements: [...presentation.elements, copy],
+            })
+            if (copy.type === 'image') setSelectedImageId(copy.id)
+            else setSelectedTextId(copy.id)
+          }
+          return
+        }
+        if (
+          (event.key === 'Delete' || event.key === 'Backspace') &&
+          (selectedTextId || selectedImageId)
+        ) {
+          event.preventDefault()
+          if (selectedTextId) deleteTextById(selectedTextId)
+          else {
+            replace({
+              ...presentation,
+              elements: presentation.elements.filter(
+                (item) => item.id !== selectedImageId,
+              ),
+            })
+            setSelectedImageId(null)
+          }
+          return
+        }
+        if (
+          event.key.startsWith('Arrow') &&
+          (selectedTextId || selectedImageId)
+        ) {
+          event.preventDefault()
+          const id = selectedTextId ?? selectedImageId
+          const amount = event.shiftKey ? 10 : 1
+          replace({
+            ...presentation,
+            elements: presentation.elements.map((item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    x:
+                      item.x +
+                      (event.key === 'ArrowRight'
+                        ? amount
+                        : event.key === 'ArrowLeft'
+                          ? -amount
+                          : 0),
+                    y:
+                      item.y +
+                      (event.key === 'ArrowDown'
+                        ? amount
+                        : event.key === 'ArrowUp'
+                          ? -amount
+                          : 0),
+                  }
+                : item,
+            ),
+          })
+          return
+        }
+        if (mod || event.altKey) return
+        if (key === 'p') void startPresentation()
+        else if (key === '0') controller.fitToScreen(presentation.frames)
+        else if (event.key === '+' || event.key === '=')
           controller.zoomTo(useEditorStore.getState().camera.zoom * 1.25)
-        if (event.key === '-')
+        else if (event.key === '-')
           controller.zoomTo(useEditorStore.getState().camera.zoom / 1.25)
       }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    }).attach()
   })
 
   function exportJSON() {
@@ -656,6 +869,8 @@ export default function App() {
     try {
       const imported = parsePresentation(await file.text())
       replace(imported)
+      setActiveFrame(0)
+      setActiveNestedId(null)
       controller.fitToScreen(imported.frames, 0)
       setMessage('Présentation importée')
     } catch {
@@ -665,11 +880,105 @@ export default function App() {
     window.setTimeout(() => setMessage(''), 3000)
   }
 
+  function renderTree(parentId?: string) {
+    return childrenOf(presentation, parentId).map((frame) => (
+      <div key={frame.id} className="structure-node">
+        <div
+          className={`structure-row ${currentFrame?.id === frame.id ? 'active' : ''}`}
+          draggable
+          onDragStart={(event) => {
+            event.stopPropagation()
+            setDraggedSlideId(frame.id)
+            event.dataTransfer.setData('text/plain', frame.id)
+          }}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            const id =
+              draggedSlideId || event.dataTransfer.getData('text/plain')
+            if (id && id !== frame.id) {
+              const bounds = event.currentTarget.getBoundingClientRect()
+              const ratio = (event.clientY - bounds.top) / bounds.height
+              const siblings = childrenOf(presentation, frame.parentId)
+              const next =
+                siblings[siblings.findIndex((item) => item.id === frame.id) + 1]
+              replace(
+                ratio < 0.3
+                  ? moveSlide(presentation, id, frame.parentId, frame.id)
+                  : ratio > 0.7
+                    ? moveSlide(presentation, id, frame.parentId, next?.id)
+                    : moveSlide(presentation, id, frame.id),
+              )
+            }
+            setDraggedSlideId(null)
+          }}
+        >
+          <button
+            type="button"
+            className="structure-title"
+            onClick={() => focusSlide(frame.id)}
+          >
+            <span>{numbers.get(frame.id)}</span>{' '}
+            {frame.name.split('·').at(-1)?.trim()}
+          </button>
+          <button
+            type="button"
+            title="Ajouter une slide imbriquée"
+            aria-label={`Ajouter une sous-slide à ${frame.name}`}
+            onClick={() => addChild(frame.id)}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            title="Dupliquer"
+            aria-label={`Dupliquer ${frame.name}`}
+            onClick={() => replace(duplicateSlide(presentation, frame.id))}
+          >
+            ⧉
+          </button>
+          <button
+            type="button"
+            title="Supprimer"
+            aria-label={`Supprimer ${frame.name} et ses sous-slides`}
+            onClick={() => {
+              if (
+                window.confirm(`Supprimer ${frame.name} et ses sous-slides ?`)
+              ) {
+                replace(deleteSlide(presentation, frame.id))
+                focus(0)
+              }
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {childrenOf(presentation, frame.id).length > 0 && (
+          <div className="structure-children">{renderTree(frame.id)}</div>
+        )}
+      </div>
+    ))
+  }
+
   return (
     <div
       className={`app ${presenting ? 'is-presenting' : cleanMode ? 'is-clean' : ''}`}
       data-theme={theme}
       ref={rootRef}
+      onTouchStart={(event) => {
+        if (presenting && event.touches.length === 1)
+          touchStart.current = {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY,
+          }
+      }}
+      onTouchEnd={(event) => {
+        if (!presenting || !touchStart.current) return
+        const dx = event.changedTouches[0].clientX - touchStart.current.x
+        touchStart.current = null
+        if (Math.abs(dx) > 65) navigateSibling(dx < 0 ? 1 : -1)
+      }}
     >
       {!presenting && !cleanMode && (
         <>
@@ -825,6 +1134,105 @@ export default function App() {
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              className="sidebar-item sidebar-action"
+              onClick={() => setShowStructure(!showStructure)}
+            >
+              Structure {showStructure ? '▴' : '▾'}
+            </button>
+            {showStructure && (
+              <div
+                className="structure-panel"
+                aria-label="Structure des slides"
+              >
+                {renderTree()}
+                <div
+                  className="structure-root-drop"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    const id =
+                      draggedSlideId || event.dataTransfer.getData('text/plain')
+                    if (id) replace(moveSlide(presentation, id))
+                    setDraggedSlideId(null)
+                  }}
+                >
+                  Déposer ici pour le parcours principal
+                </div>
+                {currentFrame?.parentId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      replace(moveSlide(presentation, currentFrame.id))
+                    }
+                  >
+                    Afficher dans le parcours principal
+                  </button>
+                )}
+                {currentFrame && (
+                  <div className="structure-number-settings">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={currentFrame.numberVisible !== false}
+                        onChange={(event) =>
+                          updateCurrentFrame({
+                            numberVisible: event.target.checked,
+                          })
+                        }
+                      />{' '}
+                      Numéro visible
+                    </label>
+                    <label>
+                      Position{' '}
+                      <select
+                        value={currentFrame.numberPosition ?? 'bottom-right'}
+                        onChange={(event) =>
+                          updateCurrentFrame({
+                            numberPosition: event.target.value as NonNullable<
+                              typeof currentFrame
+                            >['numberPosition'],
+                          })
+                        }
+                      >
+                        <option value="bottom-right">Bas droite</option>
+                        <option value="bottom-left">Bas gauche</option>
+                        <option value="top-right">Haut droite</option>
+                        <option value="top-left">Haut gauche</option>
+                      </select>
+                    </label>
+                    <label>
+                      Taille{' '}
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="2"
+                        step="0.1"
+                        value={currentFrame.numberScale ?? 1}
+                        onChange={(event) =>
+                          updateCurrentFrame({
+                            numberScale: Number(event.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Couleur{' '}
+                      <input
+                        type="color"
+                        value={currentFrame.numberColor ?? currentFrame.accent}
+                        onChange={(event) =>
+                          updateCurrentFrame({
+                            numberColor: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="sidebar-bottom">
               <div className="sidebar-tip">
                 <Sparkles size={16} />
@@ -839,7 +1247,21 @@ export default function App() {
           </aside>
           <div className="canvas-top-label">
             <span className="live-dot" /> INFINITE CANVAS{' '}
-            <span className="breadcrumb">/ &nbsp;Overview</span>
+            <span className="breadcrumb">
+              / &nbsp;
+              {breadcrumbFrames.length
+                ? breadcrumbFrames.map((frame, index) => (
+                    <button
+                      type="button"
+                      key={frame.id}
+                      onClick={() => focusSlide(frame.id)}
+                    >
+                      {index ? '› ' : ''}
+                      {numbers.get(frame.id) ?? frame.name}
+                    </button>
+                  ))
+                : 'Overview'}
+            </span>
           </div>
         </>
       )}
@@ -855,6 +1277,7 @@ export default function App() {
           onDeleteText={!cleanMode ? deleteTextById : undefined}
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
+          onExploreSlide={exploreSlide}
         />
       </main>
       {!presenting && cleanMode && (
@@ -952,20 +1375,62 @@ export default function App() {
           >
             <X size={18} />
           </button>
-          <span>
-            {activeFrame + 1} <span>/</span> {pathFrames.length}
-          </span>
+          <div
+            className="presentation-breadcrumb"
+            aria-label="Parcours de présentation"
+          >
+            {breadcrumbFrames.map((frame) => (
+              <button
+                type="button"
+                key={frame.id}
+                onClick={() => focusSlide(frame.id)}
+              >
+                {numbers.get(frame.id)}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={navigationHistory.length < 2}
+            aria-label="Revenir à la slide visitée précédemment"
+            onClick={() => {
+              const previous = navigationHistory.at(-2)
+              if (previous) {
+                setNavigationHistory((history) => history.slice(0, -2))
+                focusSlide(previous)
+              }
+            }}
+          >
+            ↶
+          </button>
+          {currentFrame && currentFrame.numberVisible !== false && (
+            <SlideNumber
+              number={numbers.get(currentFrame.id) ?? ''}
+              title={currentFrame.name}
+              childCount={childrenOf(presentation, currentFrame.id).length}
+              onExplore={() => exploreSlide(currentFrame.id)}
+            />
+          )}
+          {currentFrame?.parentId && (
+            <button
+              type="button"
+              onClick={returnToParent}
+              aria-label="Revenir à la slide parente"
+            >
+              ↥
+            </button>
+          )}
           <button
             aria-label="Étape précédente"
-            disabled={activeFrame === 0}
-            onClick={() => focus(activeFrame - 1)}
+            disabled={activeSiblingIndex <= 0}
+            onClick={() => navigateSibling(-1)}
           >
             <ArrowLeft size={18} />
           </button>
           <button
             aria-label="Étape suivante"
-            disabled={activeFrame === pathFrames.length - 1}
-            onClick={() => focus(activeFrame + 1)}
+            disabled={activeSiblingIndex >= activeSiblings.length - 1}
+            onClick={() => navigateSibling(1)}
           >
             <ArrowRight size={18} />
           </button>
