@@ -7,6 +7,7 @@ import type {
   VideoElement,
 } from '../types/presentation'
 import type { AppTheme } from './theme'
+import { presentationOrder } from '../engine/slideHierarchy'
 
 const PAGE_WIDTH = 1600
 const PAGE_HEIGHT = 900
@@ -32,10 +33,7 @@ export function elementsForPdfFrame(
   frame: Frame,
 ): CanvasElement[] {
   return presentation.elements.filter((element) => {
-    if (
-      (element.type === 'text' || element.type === 'image') &&
-      element.frameId
-    )
+    if ('frameId' in element && element.frameId)
       return element.frameId === frame.id
     const namedFrame = presentation.frames.find((candidate) =>
       element.id.startsWith(`${candidate.id}-`),
@@ -253,17 +251,20 @@ function drawText(
   element: TextElement,
   theme: AppTheme,
   visual: boolean,
+  pageStyle?: Frame['pageStyle'],
 ) {
   const palette = themePalette(theme)
   setTextFont(context, element, visual)
   context.textBaseline = 'top'
   context.textAlign = 'left'
   context.fillStyle =
-    !element.customColor && theme !== 'light'
-      ? element.variant === 'eyebrow'
-        ? '#b8dfff'
-        : palette.ink
-      : element.color
+    !element.customColor && pageStyle === 'midnight'
+      ? '#f6f7ff'
+      : !element.customColor && theme !== 'light'
+        ? element.variant === 'eyebrow'
+          ? '#b8dfff'
+          : palette.ink
+        : element.color
   const lines = wrapText(context, element.text, element.width)
   const lineHeight = textLineHeight(element, visual)
   if (element.effect === 'video') {
@@ -291,6 +292,7 @@ function drawElement(
   image: HTMLImageElement | null,
   theme: AppTheme,
   visual: boolean,
+  pageStyle?: Frame['pageStyle'],
 ) {
   context.save()
   context.translate(
@@ -317,7 +319,7 @@ function drawElement(
       context.fillRect(0, 0, element.width, element.height)
     }
   } else if (element.type === 'text') {
-    drawText(context, element, theme, visual)
+    drawText(context, element, theme, visual, pageStyle)
   } else {
     context.beginPath()
     context.roundRect(0, 0, element.width, element.height, 14)
@@ -368,12 +370,35 @@ function drawFrame(
   context.shadowColor = '#081c2a45'
   context.shadowBlur = 30
   context.shadowOffsetY = 12
-  context.fillStyle = palette.frame
+  if (frame.pageStyle) {
+    const gradient = context.createLinearGradient(
+      0,
+      0,
+      frame.width,
+      frame.height,
+    )
+    if (frame.pageStyle === 'midnight') {
+      gradient.addColorStop(0, '#111827')
+      gradient.addColorStop(1, '#30427a')
+    } else if (frame.pageStyle === 'aurora') {
+      gradient.addColorStop(0, '#fff1fa')
+      gradient.addColorStop(1, '#dce8ff')
+    } else if (frame.pageStyle === 'sand') {
+      gradient.addColorStop(0, '#fffdfa')
+      gradient.addColorStop(1, '#efdfc7')
+    } else {
+      gradient.addColorStop(0, '#ffffff')
+      gradient.addColorStop(1, '#ffffff')
+    }
+    context.fillStyle = gradient
+  } else {
+    context.fillStyle = palette.frame
+  }
   context.beginPath()
   context.roundRect(0, 0, frame.width, frame.height, 20)
   context.fill()
   context.shadowColor = 'transparent'
-  context.strokeStyle = frame.accent
+  context.strokeStyle = frame.pageStyle ? '#ffffff90' : frame.accent
   context.lineWidth = 3
   context.stroke()
   context.restore()
@@ -385,9 +410,7 @@ export async function createPresentationPdf(
   onProgress?: (completed: number, total: number) => void,
 ): Promise<{ blob: Blob; missingImages: number }> {
   const { jsPDF } = await import('jspdf')
-  const frames = presentation.path
-    .map((id) => presentation.frames.find((frame) => frame.id === id))
-    .filter((frame): frame is Frame => frame !== undefined)
+  const frames = presentationOrder(presentation)
   if (!frames.length)
     throw new Error('Cette présentation ne contient aucune étape.')
   await document.fonts.ready
@@ -427,7 +450,12 @@ export async function createPresentationPdf(
           if (!image) missingImages++
         }),
     )
-    const bounds = contentBounds(context, frame, elements, visual)
+    const bounds = contentBounds(
+      context,
+      frame,
+      elements,
+      frame.parentId ? false : visual,
+    )
     const scale = Math.min(
       (PAGE_WIDTH - PAGE_MARGIN * 2) / (bounds.right - bounds.left),
       (CONTENT_BOTTOM - CONTENT_TOP) / (bounds.bottom - bounds.top),
@@ -468,7 +496,8 @@ export async function createPresentationPdf(
         element,
         images.get(element.id) ?? null,
         theme,
-        visual,
+        frame.parentId ? false : visual,
+        frame.pageStyle,
       )
     }
     context.restore()

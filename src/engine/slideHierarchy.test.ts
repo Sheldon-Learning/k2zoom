@@ -9,6 +9,7 @@ import {
   deleteSlide,
   duplicateSlide,
   moveSlide,
+  presentationOrder,
   slideNumbers,
 } from './slideHierarchy'
 
@@ -29,6 +30,12 @@ describe('nested presentation slides', () => {
     expect(second.path).toEqual(demoPresentation.path)
     expect(slideNumbers(second).get(child.id)).toBe('02.1')
     expect(slideNumbers(second).get(grandchild.id)).toBe('02.1.1')
+    expect(presentationOrder(second).map((frame) => frame.id)).toEqual([
+      demoPresentation.path[0],
+      parent,
+      child.id,
+      grandchild.id,
+    ])
     expect(ancestorsOf(second, grandchild.id).map((frame) => frame.id)).toEqual(
       [parent, child.id],
     )
@@ -70,6 +77,9 @@ describe('nested presentation slides', () => {
     )
     expect(styled.frames.find((frame) => frame.id === child.id)?.parentId).toBe(
       styled.path[0],
+    )
+    expect(styled.frames.find((frame) => frame.id === child.id)?.width).toBe(
+      child.width,
     )
     expect(
       childrenOf(styled, styled.path[0]).map((frame) => frame.id),

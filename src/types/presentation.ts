@@ -23,6 +23,7 @@ export interface Frame {
   cameraZoom: number
   duration: number
   accent: string
+  pageStyle?: 'paper' | 'aurora' | 'midnight' | 'sand'
 }
 
 interface BaseElement {
@@ -68,6 +69,7 @@ export interface ImageElement extends BaseElement {
 
 export interface VideoElement extends BaseElement {
   type: 'video'
+  frameId?: string
   videoId: string
   title: string
 }

@@ -41,6 +41,19 @@ export function slideNumbers(presentation: Presentation): Map<string, string> {
   return numbers
 }
 
+export function presentationOrder(presentation: Presentation): Frame[] {
+  const frames: Frame[] = []
+  const seen = new Set<string>()
+  const visit = (frame: Frame) => {
+    if (seen.has(frame.id)) return
+    seen.add(frame.id)
+    frames.push(frame)
+    childrenOf(presentation, frame.id).forEach(visit)
+  }
+  childrenOf(presentation).forEach(visit)
+  return frames
+}
+
 export function ancestorsOf(presentation: Presentation, id: string): Frame[] {
   const byId = new Map(presentation.frames.map((frame) => [frame.id, frame]))
   const result: Frame[] = []
@@ -61,20 +74,21 @@ export function addNestedSlide(
 ): Presentation {
   const parent = presentation.frames.find((frame) => frame.id === parentId)
   if (!parent) return presentation
-  const siblings = childrenOf(presentation, parentId)
   const frame: Frame = {
-    ...parent,
     id: `frame-${crypto.randomUUID()}`,
     name: 'Nouvelle sous-slide',
     parentId,
     children: [],
     hiddenFromMainPath: true,
-    x: parent.x + parent.width * (0.08 + (siblings.length % 2) * 0.46),
-    y:
-      parent.y + parent.height * (0.12 + Math.floor(siblings.length / 2) * 0.4),
-    width: Math.max(80, parent.width * 0.38),
-    height: Math.max(55, parent.height * 0.32),
-    cameraZoom: parent.cameraZoom,
+    x: 0,
+    y: 0,
+    width: 960,
+    height: 600,
+    rotation: 0,
+    cameraZoom: 1,
+    duration: 650,
+    accent: '#aab4d2',
+    pageStyle: 'paper',
   }
   return {
     ...presentation,
@@ -91,6 +105,39 @@ export function addNestedSlide(
           : item,
       ),
       frame,
+    ],
+    elements: [
+      ...presentation.elements,
+      {
+        id: `${frame.id}-caption`,
+        type: 'text',
+        frameId: frame.id,
+        variant: 'heading',
+        text: frame.name,
+        color: '#172736',
+        fontFamily: 'Manrope',
+        fontSize: 62,
+        x: frame.x + 80,
+        y: frame.y + 120,
+        width: frame.width - 160,
+        height: 110,
+        rotation: 0,
+      },
+      {
+        id: `${frame.id}-intro`,
+        type: 'text',
+        frameId: frame.id,
+        variant: 'body',
+        text: 'Double-cliquez pour raconter votre idée.',
+        color: '#657187',
+        fontFamily: 'DM Sans',
+        fontSize: 23,
+        x: frame.x + 82,
+        y: frame.y + 245,
+        width: frame.width - 164,
+        height: 100,
+        rotation: 0,
+      },
     ],
   }
 }

@@ -33,6 +33,9 @@ import { youtubeEmbedUrl } from '../../utils/youtube'
 
 interface Props {
   presentation: Presentation
+  hierarchyPresentation?: Presentation
+  nestedPage?: boolean
+  nestedPageStyle?: string
   controller: CameraController
   viewportRef: React.RefObject<HTMLDivElement | null>
   selectedTextId?: string | null
@@ -48,6 +51,9 @@ interface Props {
 
 export function InfiniteCanvas({
   presentation,
+  hierarchyPresentation = presentation,
+  nestedPage = false,
+  nestedPageStyle = 'paper',
   controller,
   viewportRef,
   selectedTextId,
@@ -60,7 +66,7 @@ export function InfiniteCanvas({
   onExploreSlide,
   onDoubleClickSlideNumber,
 }: Props) {
-  const numbers = slideNumbers(presentation)
+  const numbers = slideNumbers(hierarchyPresentation)
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
   const activeFrame = useEditorStore((state) => state.activeFrame)
@@ -506,7 +512,7 @@ export function InfiniteCanvas({
 
   return (
     <div
-      className={`canvas-viewport style-${presentation.style ?? 'story'} ${grabbing ? 'is-grabbing' : ''}`}
+      className={`canvas-viewport style-${presentation.style ?? 'story'} ${nestedPage ? `nested-workspace nested-style-${nestedPageStyle}` : ''} ${grabbing ? 'is-grabbing' : ''}`}
       ref={viewportRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -532,7 +538,7 @@ export function InfiniteCanvas({
         )}
         {presentation.frames.map((frame, index) => (
           <div
-            className="canvas-frame"
+            className={`canvas-frame ${nestedPage ? `page-style-${frame.pageStyle ?? 'paper'}` : ''}`}
             key={frame.id}
             style={
               {
@@ -554,9 +560,10 @@ export function InfiniteCanvas({
                 }}
                 number={numbers.get(frame.id)!}
                 title={frame.name}
-                childCount={childrenOf(presentation, frame.id).length}
+                childCount={childrenOf(hierarchyPresentation, frame.id).length}
                 onExplore={
-                  presenting && !childrenOf(presentation, frame.id).length
+                  presenting &&
+                  !childrenOf(hierarchyPresentation, frame.id).length
                     ? undefined
                     : () => onExploreSlide?.(frame.id)
                 }
@@ -567,7 +574,7 @@ export function InfiniteCanvas({
                 }
                 actionLabel={
                   !presenting
-                    ? childrenOf(presentation, frame.id).length
+                    ? childrenOf(hierarchyPresentation, frame.id).length
                       ? `Double-cliquer pour explorer les sous-slides de ${frame.name}`
                       : `Double-cliquer pour créer une sous-présentation de ${frame.name}`
                     : undefined
@@ -577,7 +584,9 @@ export function InfiniteCanvas({
             )}
             {!presenting && (
               <div className="frame-label">
-                <span>{String(index + 1).padStart(2, '0')}</span>
+                <span>
+                  {numbers.get(frame.id) ?? String(index + 1).padStart(2, '0')}
+                </span>
                 {frame.name.split('·').at(-1)?.trim()}
               </div>
             )}

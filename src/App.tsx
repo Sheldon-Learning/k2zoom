@@ -30,6 +30,7 @@ import {
   slideNumbers,
 } from './engine/slideHierarchy'
 import { StylePicker } from './components/ui/StylePicker'
+import { PageStylePicker } from './components/ui/PageStylePicker'
 import { TextEditor } from './components/ui/TextEditor'
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
 import { VideoDialog } from './components/ui/VideoDialog'
@@ -41,6 +42,7 @@ import {
   galleryFromPresentation,
 } from './data/visualStyles'
 import { CameraController } from './engine/CameraController'
+import { workspacePresentation } from './engine/slideWorkspace'
 import {
   KeyboardShortcutManager,
   isTypingTarget,
@@ -77,6 +79,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showStyles, setShowStyles] = useState(false)
+  const [showPageStyles, setShowPageStyles] = useState(false)
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
@@ -113,6 +116,14 @@ export default function App() {
   const currentFrame = activeNestedId
     ? presentation.frames.find((frame) => frame.id === activeNestedId)
     : pathFrames[activeFrame]
+  const visiblePresentation = workspacePresentation(
+    presentation,
+    activeNestedId,
+  )
+  const workspaceFrames =
+    activeNestedId && currentFrame?.parentId
+      ? childrenOf(presentation, currentFrame.parentId)
+      : pathFrames
   const numbers = slideNumbers(presentation)
   const numberMenuFrame = presentation.frames.find(
     (frame) => frame.id === numberMenuFrameId,
@@ -228,15 +239,21 @@ export default function App() {
       text: title ? 'VOTRE TITRE' : 'Votre texte',
       color: title ? '#172736' : '#5e7281',
       customColor: false,
-      fontFamily: title ? 'Impact' : 'DM Sans',
-      fontSize: title ? 100 : 21,
-      effect: title ? 'video' : 'plain',
-      x: currentFrame.x + (title ? 25 : 32),
-      y: title
-        ? currentFrame.y + 80
-        : currentFrame.y + currentFrame.height + 34,
+      fontFamily: title
+        ? currentFrame.parentId
+          ? 'Manrope'
+          : 'Impact'
+        : 'DM Sans',
+      fontSize: title ? (currentFrame.parentId ? 56 : 100) : 21,
+      effect: title && !currentFrame.parentId ? 'video' : 'plain',
+      x: currentFrame.x + (currentFrame.parentId ? 80 : title ? 25 : 32),
+      y: currentFrame.parentId
+        ? currentFrame.y + (title ? 90 : 420)
+        : title
+          ? currentFrame.y + 80
+          : currentFrame.y + currentFrame.height + 34,
       width: title
-        ? currentFrame.width - 50
+        ? currentFrame.width - (currentFrame.parentId ? 160 : 50)
         : Math.min(currentFrame.width - 64, 480),
       height: title ? 230 : 90,
       rotation: 0,
@@ -508,6 +525,52 @@ export default function App() {
     if (!files?.length) return
     try {
       const images = await prepareImages(Array.from(files))
+      if (currentFrame?.parentId) {
+        const frame = currentFrame
+        const added = await Promise.all(
+          images.map(async (image, index): Promise<ImageElement> => {
+            const preview = new Image()
+            preview.src = image.src
+            await preview.decode()
+            const scale = Math.min(
+              1,
+              500 / preview.naturalWidth,
+              230 / preview.naturalHeight,
+            )
+            const width = Math.max(1, Math.round(preview.naturalWidth * scale))
+            const height = Math.max(
+              1,
+              Math.round(preview.naturalHeight * scale),
+            )
+            return {
+              id: `page-image-${crypto.randomUUID()}`,
+              type: 'image',
+              frameId: frame.id,
+              src: image.src,
+              alt: image.alt,
+              x: frame.x + Math.round((frame.width - width) / 2) + index * 20,
+              y: frame.y + 335 + index * 16,
+              width,
+              height,
+              rotation: 0,
+            }
+          }),
+        )
+        const next = {
+          ...presentation,
+          elements: [...presentation.elements, ...added],
+        }
+        if (JSON.stringify(next).length > 3_500_000)
+          throw new Error('Stockage local plein : utilisez moins d’images.')
+        replace(next)
+        setSelectedImageId(added.at(-1)?.id ?? null)
+        setSelectedTextId(null)
+        setMessage(
+          `${added.length} image${added.length > 1 ? 's' : ''} ajoutée${added.length > 1 ? 's' : ''} à cette page`,
+        )
+        window.setTimeout(() => setMessage(''), 4000)
+        return
+      }
       const visualStyle =
         presentation.style && presentation.style !== 'story'
           ? presentation.style
@@ -562,6 +625,31 @@ export default function App() {
   }
 
   function addVideo(videoId: string, caption: string) {
+    if (currentFrame?.parentId) {
+      const frame = currentFrame
+      replace({
+        ...presentation,
+        elements: [
+          ...presentation.elements,
+          {
+            id: `page-video-${crypto.randomUUID()}`,
+            type: 'video',
+            frameId: frame.id,
+            videoId,
+            title: caption,
+            x: frame.x + 240,
+            y: frame.y + 315,
+            width: 480,
+            height: 270,
+            rotation: 0,
+          },
+        ],
+      })
+      setShowVideoDialog(false)
+      setMessage('Vidéo ajoutée à cette page')
+      window.setTimeout(() => setMessage(''), 4000)
+      return
+    }
     if (gallery.length + 1 > 24) {
       setMessage('Limite de 24 médias par présentation.')
       window.setTimeout(() => setMessage(''), 4000)
@@ -613,6 +701,7 @@ export default function App() {
     setNavigationHistory((history) => [...history, id])
     setSelectedTextId(null)
     setSelectedImageId(null)
+    setNumberMenuFrameId(null)
     controller.focusOn(frame, frame.duration)
   }
 
@@ -655,9 +744,19 @@ export default function App() {
       const index = pathFrames.findIndex((frame) => frame.id === root?.id)
       if (index >= 0) setActiveFrame(index)
       setActiveNestedId(child.id)
+      setSelectedTextId(null)
+      setSelectedImageId(null)
       setNavigationHistory((history) => [...history, id, child.id])
       controller.focusOn(child)
+      setShowPageStyles(true)
     }
+  }
+
+  function choosePageStyle(
+    style: NonNullable<NonNullable<typeof currentFrame>['pageStyle']>,
+  ) {
+    updateCurrentFrame({ pageStyle: style })
+    setShowPageStyles(false)
   }
 
   function updateCurrentFrame(
@@ -674,6 +773,7 @@ export default function App() {
 
   async function startPresentation() {
     if (!pathFrames.length) return
+    const startingNestedId = activeNestedId
     setNumberMenuFrameId(null)
     setPresenting(true)
     setShowMenu(false)
@@ -682,7 +782,10 @@ export default function App() {
     } catch {
       /* Browser may deny fullscreen. */
     }
-    requestAnimationFrame(() => focus(0))
+    requestAnimationFrame(() => {
+      if (startingNestedId) focusSlide(startingNestedId)
+      else focus(0)
+    })
   }
 
   function stopPresentation() {
@@ -704,12 +807,14 @@ export default function App() {
         else if (
           showHelp ||
           showStyles ||
+          showPageStyles ||
           showVideoDialog ||
           showTextEditor ||
           showMenu
         ) {
           setShowHelp(false)
           setShowStyles(false)
+          setShowPageStyles(false)
           setShowVideoDialog(false)
           setShowTextEditor(false)
           setShowMenu(false)
@@ -721,7 +826,14 @@ export default function App() {
         return
       }
       if (isTypingTarget(event.target)) return
-      if (showHelp || showStyles || showVideoDialog || showMenu) return
+      if (
+        showHelp ||
+        showStyles ||
+        showPageStyles ||
+        showVideoDialog ||
+        showMenu
+      )
+        return
       if (useEditorStore.getState().presenting) {
         if (
           (event.key === 'Enter' || event.key === ' ') &&
@@ -833,7 +945,7 @@ export default function App() {
         }
         if (mod || event.altKey) return
         if (key === 'p') void startPresentation()
-        else if (key === '0') controller.fitToScreen(presentation.frames)
+        else if (key === '0') controller.fitToScreen(visiblePresentation.frames)
         else if (event.key === '+' || event.key === '=')
           controller.zoomTo(useEditorStore.getState().camera.zoom * 1.25)
         else if (event.key === '-')
@@ -1024,7 +1136,7 @@ export default function App() {
 
   return (
     <div
-      className={`app ${presenting ? 'is-presenting' : cleanMode ? 'is-clean' : ''}`}
+      className={`app ${presenting ? 'is-presenting' : cleanMode ? 'is-clean' : ''} ${activeNestedId ? 'is-nested-page' : ''}`}
       data-theme={theme}
       ref={rootRef}
       onTouchStart={(event) => {
@@ -1082,9 +1194,12 @@ export default function App() {
             <div className="topbar-spacer" />
             <button
               className="button button-light styles-top-button"
-              onClick={() => setShowStyles(true)}
+              onClick={() =>
+                activeNestedId ? setShowPageStyles(true) : setShowStyles(true)
+              }
             >
-              <LayoutTemplate size={16} /> Styles
+              <LayoutTemplate size={16} />{' '}
+              {activeNestedId ? 'Style de la page' : 'Styles'}
             </button>
             <button
               className="button button-light images-top-button"
@@ -1160,9 +1275,13 @@ export default function App() {
             </div>
             <button
               className="sidebar-item sidebar-action"
-              onClick={() => setShowStyles(true)}
+              onClick={() =>
+                activeNestedId ? setShowPageStyles(true) : setShowStyles(true)
+              }
             >
-              <LayoutTemplate size={18} /> Styles <ArrowRight size={14} />
+              <LayoutTemplate size={18} />{' '}
+              {activeNestedId ? 'Style de la page' : 'Styles'}{' '}
+              <ArrowRight size={14} />
             </button>
             <button
               className="sidebar-item sidebar-action"
@@ -1184,17 +1303,20 @@ export default function App() {
             </button>
             <div className="sidebar-separator" />
             <div className="sidebar-section-label">
-              YOUR STORY <span>{pathFrames.length}</span>
+              {activeNestedId ? 'PAGES DE LA SECTION' : 'YOUR STORY'}{' '}
+              <span>{workspaceFrames.length}</span>
             </div>
             <div className="sidebar-frames">
-              {pathFrames.map((frame, index) => (
+              {workspaceFrames.map((frame, index) => (
                 <button
                   key={frame.id}
-                  className={`sidebar-frame ${activeFrame === index ? 'active' : ''}`}
-                  onClick={() => focus(index)}
+                  className={`sidebar-frame ${currentFrame?.id === frame.id ? 'active' : ''}`}
+                  onClick={() => focusSlide(frame.id)}
                 >
                   <span className="frame-number">
-                    {String(index + 1).padStart(2, '0')}
+                    {activeNestedId
+                      ? numbers.get(frame.id)
+                      : String(index + 1).padStart(2, '0')}
                   </span>
                   <span>{frame.name.split('·').at(-1)?.trim()}</span>
                   <span
@@ -1315,29 +1437,57 @@ export default function App() {
               <span className="sidebar-version">KZOOM / EARLY ACCESS</span>
             </div>
           </aside>
-          <div className="canvas-top-label">
-            <span className="live-dot" /> INFINITE CANVAS{' '}
-            <span className="breadcrumb">
-              / &nbsp;
-              {breadcrumbFrames.length
-                ? breadcrumbFrames.map((frame, index) => (
-                    <button
-                      type="button"
-                      key={frame.id}
-                      onClick={() => focusSlide(frame.id)}
-                    >
-                      {index ? '› ' : ''}
-                      {numbers.get(frame.id) ?? frame.name}
-                    </button>
-                  ))
-                : 'Overview'}
-            </span>
-          </div>
+          {!activeNestedId && (
+            <div className="canvas-top-label">
+              <span className="live-dot" /> INFINITE CANVAS{' '}
+              <span className="breadcrumb">
+                / &nbsp;
+                {breadcrumbFrames.length
+                  ? breadcrumbFrames.map((frame, index) => (
+                      <button
+                        type="button"
+                        key={frame.id}
+                        onClick={() => focusSlide(frame.id)}
+                      >
+                        {index ? '› ' : ''}
+                        {numbers.get(frame.id) ?? frame.name}
+                      </button>
+                    ))
+                  : 'Overview'}
+              </span>
+            </div>
+          )}
         </>
       )}
       <main className="canvas-area">
+        {!presenting && activeNestedId && currentFrame && (
+          <div className="nested-page-toolbar">
+            <button
+              type="button"
+              className="nested-page-back"
+              onClick={returnToParent}
+              aria-label="Revenir à la page parente"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="nested-page-heading">
+              <span>SOUS-PRÉSENTATION / {numbers.get(currentFrame.id)}</span>
+              <strong>{currentFrame.name.split('·').at(-1)?.trim()}</strong>
+            </div>
+            <button
+              type="button"
+              className="nested-page-style-button"
+              onClick={() => setShowPageStyles(true)}
+            >
+              <LayoutTemplate size={16} /> Style de la page
+            </button>
+          </div>
+        )}
         <InfiniteCanvas
-          presentation={presentation}
+          presentation={visiblePresentation}
+          hierarchyPresentation={presentation}
+          nestedPage={!!activeNestedId}
+          nestedPageStyle={currentFrame?.pageStyle}
           controller={controller}
           viewportRef={viewportRef}
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
@@ -1384,18 +1534,15 @@ export default function App() {
               ? '+ Ajouter une sous-slide'
               : '+ Créer une sous-présentation'}
           </button>
-          {childrenOf(presentation, numberMenuFrame.id).length > 0 && (
+          {childrenOf(presentation, numberMenuFrame.id).map((child) => (
             <button
+              key={child.id}
               type="button"
-              onClick={() => {
-                exploreSlide(numberMenuFrame.id)
-                setNumberMenuFrameId(null)
-              }}
+              onClick={() => focusSlide(child.id)}
             >
-              Explorer les {childrenOf(presentation, numberMenuFrame.id).length}{' '}
-              sous-slides
+              {numbers.get(child.id)} · {child.name.split('·').at(-1)?.trim()}
             </button>
-          )}
+          ))}
         </div>
       )}
       {!presenting && cleanMode && (
@@ -1421,38 +1568,46 @@ export default function App() {
               <span className="timeline-icon">
                 <Clapperboard size={17} />
               </span>
-              <strong>Presentation path</strong>
-              <span className="timeline-sub">Your story, one space</span>
+              <strong>
+                {activeNestedId ? 'Pages de la section' : 'Presentation path'}
+              </strong>
+              <span className="timeline-sub">
+                {activeNestedId
+                  ? 'Un espace pour chaque idée'
+                  : 'Your story, one space'}
+              </span>
             </div>
-            <span className="timeline-count">{pathFrames.length} FRAMES</span>
+            <span className="timeline-count">
+              {workspaceFrames.length} {activeNestedId ? 'PAGES' : 'FRAMES'}
+            </span>
           </div>
           <div className="timeline-items">
-            {pathFrames.map((frame, index) => (
+            {workspaceFrames.map((frame, index) => (
               <button
                 key={frame.id}
-                onClick={() => focus(index)}
-                className={`timeline-item ${activeFrame === index ? 'active' : ''}`}
+                onClick={() => focusSlide(frame.id)}
+                className={`timeline-item ${currentFrame?.id === frame.id ? 'active' : ''}`}
               >
-                <span className="timeline-index">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
+                <span className="timeline-index">{numbers.get(frame.id)}</span>
                 <span
-                  className="timeline-preview"
+                  className={`timeline-preview ${activeNestedId ? `page-style-${frame.pageStyle ?? 'paper'}` : ''}`}
                   style={
                     { '--preview-accent': frame.accent } as React.CSSProperties
                   }
                 >
-                  {gallery[index]?.kind === 'image' ? (
+                  {!activeNestedId && gallery[index]?.kind === 'image' ? (
                     <img src={gallery[index].src} alt="" />
-                  ) : gallery[index]?.kind === 'video' ? (
+                  ) : !activeNestedId && gallery[index]?.kind === 'video' ? (
                     <span className="timeline-video-preview">
                       <Play size={20} fill="currentColor" /> VIDÉO
                     </span>
                   ) : (
                     <span>
-                      {index === 0
-                        ? 'Ideas deserve more space.'
-                        : 'Think beyond the slide.'}
+                      {activeNestedId
+                        ? frame.name.split('·').at(-1)?.trim()
+                        : index === 0
+                          ? 'Ideas deserve more space.'
+                          : 'Think beyond the slide.'}
                     </span>
                   )}
                 </span>
@@ -1610,6 +1765,13 @@ export default function App() {
           onSelect={chooseStyle}
           onUpload={() => imageRef.current?.click()}
           onClose={() => setShowStyles(false)}
+        />
+      )}
+      {showPageStyles && !presenting && currentFrame?.parentId && (
+        <PageStylePicker
+          selected={currentFrame.pageStyle ?? 'paper'}
+          onSelect={choosePageStyle}
+          onClose={() => setShowPageStyles(false)}
         />
       )}
       {showVideoDialog && !presenting && (

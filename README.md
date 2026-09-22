@@ -12,6 +12,7 @@ Kzoom is a spatial presentation prototype. Ideas live on one canvas; a camera tr
 - Local autosave for the document title and JSON import/export
 - PDF download with one page per presentation step, including text, images, and clickable YouTube links
 - PDF and PowerPoint `.pptx` import from the File menu, creating one slide per page or source slide
+- Nested slides that open as separate full-size pages, each with its own visual style and content
 - Eleven visual image paths: timeline arrow, circle, four column mosaic, spiral, zigzag, chevrons, numbered medallions, vertical steps, ribbons, milestones, and color spectrum
 - JPG, PNG, and WebP image upload with local resizing and a camera frame for each image
 - YouTube links as video steps, playable inside the canvas in editor and presentation mode
@@ -21,6 +22,8 @@ Kzoom is a spatial presentation prototype. Ideas live on one canvas; a camera tr
 The original startup demo remains available as the Classic style. Visual styles can be selected from **Styles**; their sample illustrations can be replaced with personal images from **Images**. Use the video button to add a YouTube URL as another step. Images and video IDs are stored in this browser as part of the presentation JSON, subject to browser storage limits. The YouTube player loads only when clicked and uses YouTube's privacy enhanced embed domain. Export JSON to keep a portable backup. Frame creation, path reordering, undo/redo, and collaboration are planned work.
 
 Use **File → Importer PDF / PowerPoint** to turn a PDF or `.pptx` into a new presentation. Each source page or slide becomes a visual slide in the canvas. Import runs in the browser and replaces the current presentation; export JSON first if you need a backup. Embedded document text is part of the page image, while new Kzoom text blocks remain editable. Files up to 30 MB and 40 pages/slides are accepted when the converted presentation fits local browser storage. Legacy `.ppt` files need to be saved as `.pptx` first.
+
+Double-click a slide number to enter its nested pages, or create the first one from the number menu. Each nested page opens in its own workspace. Use **Style de la page** to choose Clair, Aurore, Minuit, or Sable; the chosen style and page content are saved with the presentation. The back button returns to the parent slide, and PDF export includes nested pages after their parent.
 
 ## Stack and decisions
 

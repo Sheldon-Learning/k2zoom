@@ -380,18 +380,10 @@ export function buildVisualPresentation(
     )
     if (index < 0) break
     const old = pending.splice(index, 1)[0]
-    const oldParent = oldById.get(old.parentId!)!
     const parentId = rootMap.get(old.parentId!) ?? old.parentId!
-    const parent = frameMap.get(parentId)!
-    const scaleX = parent.width / oldParent.width
-    const scaleY = parent.height / oldParent.height
     const moved = {
       ...old,
       parentId,
-      x: parent.x + (old.x - oldParent.x) * scaleX,
-      y: parent.y + (old.y - oldParent.y) * scaleY,
-      width: old.width * scaleX,
-      height: old.height * scaleY,
     }
     next.frames.push(moved)
     frameMap.set(moved.id, moved)

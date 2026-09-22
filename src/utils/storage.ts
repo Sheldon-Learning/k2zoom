@@ -66,7 +66,9 @@ export function parsePresentation(json: string): Presentation {
         frame.cameraZoom > 0 &&
         isNumber(frame.duration) &&
         frame.duration >= 0 &&
-        typeof frame.accent === 'string',
+        typeof frame.accent === 'string' &&
+        (frame.pageStyle === undefined ||
+          ['paper', 'aurora', 'midnight', 'sand'].includes(frame.pageStyle)),
       // Optional hierarchy fields keep older JSON presentations valid.
     )
   ) {
@@ -109,6 +111,8 @@ export function parsePresentation(json: string): Presentation {
             : element.type === 'image'
               ? isImageSource(element.src) && typeof element.alt === 'string'
               : element.type === 'video' &&
+                (element.frameId === undefined ||
+                  typeof element.frameId === 'string') &&
                 typeof element.videoId === 'string' &&
                 /^[A-Za-z0-9_-]{11}$/.test(element.videoId) &&
                 typeof element.title === 'string'),
