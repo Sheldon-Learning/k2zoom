@@ -62,6 +62,24 @@ export function InfiniteCanvas({
   const camera = useEditorStore((state) => state.camera)
   const presenting = useEditorStore((state) => state.presenting)
   const activeFrame = useEditorStore((state) => state.activeFrame)
+  const textOnFrameIds = new Set(
+    presentation.elements
+      .filter(
+        (element) =>
+          element.type === 'text' &&
+          presentation.frames.some((frame) => {
+            const centerX = element.x + element.width / 2
+            const centerY = element.y + element.height / 2
+            return (
+              centerX >= frame.x &&
+              centerX <= frame.x + frame.width &&
+              centerY >= frame.y &&
+              centerY <= frame.y + frame.height
+            )
+          }),
+      )
+      .map((element) => element.id),
+  )
   const drag = useRef<{ x: number; y: number } | null>(null)
   const imageFocus = useRef<{ imageId: string; previousCamera: Camera } | null>(
     null,
@@ -521,7 +539,17 @@ export function InfiniteCanvas({
                 number={numbers.get(frame.id)!}
                 title={frame.name}
                 childCount={childrenOf(presentation, frame.id).length}
-                onExplore={() => onExploreSlide?.(frame.id)}
+                onExplore={
+                  presenting && !childrenOf(presentation, frame.id).length
+                    ? undefined
+                    : () => onExploreSlide?.(frame.id)
+                }
+                actionLabel={
+                  !presenting
+                    ? `Gérer les sous-slides de ${frame.name}`
+                    : undefined
+                }
+                showAddIndicator={!presenting}
               />
             )}
             {!presenting && (
@@ -535,7 +563,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'}`}
             role={
               element.type === 'image' ||
               (element.type === 'text' && !presenting && onSelectText)

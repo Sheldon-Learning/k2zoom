@@ -84,6 +84,9 @@ export default function App() {
   const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
   const [navigationHistory, setNavigationHistory] = useState<string[]>([])
   const [showStructure, setShowStructure] = useState(false)
+  const [numberMenuFrameId, setNumberMenuFrameId] = useState<string | null>(
+    null,
+  )
   const [draggedSlideId, setDraggedSlideId] = useState<string | null>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -108,6 +111,9 @@ export default function App() {
     ? presentation.frames.find((frame) => frame.id === activeNestedId)
     : pathFrames[activeFrame]
   const numbers = slideNumbers(presentation)
+  const numberMenuFrame = presentation.frames.find(
+    (frame) => frame.id === numberMenuFrameId,
+  )
   const breadcrumbFrames = currentFrame
     ? [...ancestorsOf(presentation, currentFrame.id), currentFrame]
     : []
@@ -217,8 +223,8 @@ export default function App() {
       frameId: currentFrame.id,
       variant: title ? 'heading' : 'body',
       text: title ? 'VOTRE TITRE' : 'Votre texte',
-      color: title ? '#ffffff' : '#5e7281',
-      customColor: title,
+      color: title ? '#172736' : '#5e7281',
+      customColor: false,
       fontFamily: title ? 'Impact' : 'DM Sans',
       fontSize: title ? 100 : 21,
       effect: title ? 'video' : 'plain',
@@ -397,12 +403,10 @@ export default function App() {
       if (!id) return
       handleCopy(event)
       const latest = usePresentationStore.getState().presentation
-      usePresentationStore
-        .getState()
-        .replace({
-          ...latest,
-          elements: latest.elements.filter((item) => item.id !== id),
-        })
+      usePresentationStore.getState().replace({
+        ...latest,
+        elements: latest.elements.filter((item) => item.id !== id),
+      })
       setSelectedImageId(null)
       setSelectedTextId(null)
     }
@@ -613,6 +617,11 @@ export default function App() {
     if (first) focusSlide(first.id)
   }
 
+  function handleSlideNumberClick(id: string) {
+    if (presenting) exploreSlide(id)
+    else setNumberMenuFrameId(id)
+  }
+
   function navigateSibling(delta: number) {
     const next = activeSiblings[activeSiblingIndex + delta]
     if (next) focusSlide(next.id)
@@ -627,7 +636,13 @@ export default function App() {
     replace(next)
     const child = next.frames.at(-1)
     if (child) {
+      const root =
+        ancestorsOf(presentation, id)[0] ??
+        presentation.frames.find((frame) => frame.id === id)
+      const index = pathFrames.findIndex((frame) => frame.id === root?.id)
+      if (index >= 0) setActiveFrame(index)
       setActiveNestedId(child.id)
+      setNavigationHistory((history) => [...history, id, child.id])
       controller.focusOn(child)
     }
   }
@@ -646,6 +661,7 @@ export default function App() {
 
   async function startPresentation() {
     if (!pathFrames.length) return
+    setNumberMenuFrameId(null)
     setPresenting(true)
     setShowMenu(false)
     try {
@@ -667,6 +683,10 @@ export default function App() {
       const key = event.key.toLowerCase()
       const mod = event.ctrlKey || event.metaKey
       if (event.key === 'Escape') {
+        if (numberMenuFrameId) {
+          setNumberMenuFrameId(null)
+          return
+        }
         if (useEditorStore.getState().presenting) stopPresentation()
         else if (
           showHelp ||
@@ -1277,9 +1297,51 @@ export default function App() {
           onDeleteText={!cleanMode ? deleteTextById : undefined}
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
-          onExploreSlide={exploreSlide}
+          onExploreSlide={handleSlideNumberClick}
         />
       </main>
+      {!presenting && numberMenuFrame && (
+        <div
+          className="slide-number-menu"
+          role="dialog"
+          aria-label={`Sous-slides de ${numberMenuFrame.name}`}
+        >
+          <div className="slide-number-menu-heading">
+            <span>
+              <strong>{numbers.get(numberMenuFrame.id)}</strong>{' '}
+              {numberMenuFrame.name.split('·').at(-1)?.trim()}
+            </span>
+            <button
+              type="button"
+              aria-label="Fermer"
+              onClick={() => setNumberMenuFrameId(null)}
+            >
+              ×
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              addChild(numberMenuFrame.id)
+              setNumberMenuFrameId(null)
+            }}
+          >
+            + Ajouter une sous-slide
+          </button>
+          {childrenOf(presentation, numberMenuFrame.id).length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                exploreSlide(numberMenuFrame.id)
+                setNumberMenuFrameId(null)
+              }}
+            >
+              Explorer les {childrenOf(presentation, numberMenuFrame.id).length}{' '}
+              sous-slides
+            </button>
+          )}
+        </div>
+      )}
       {!presenting && cleanMode && (
         <button
           className="brand brand-button clean-toggle"
@@ -1408,7 +1470,11 @@ export default function App() {
               number={numbers.get(currentFrame.id) ?? ''}
               title={currentFrame.name}
               childCount={childrenOf(presentation, currentFrame.id).length}
-              onExplore={() => exploreSlide(currentFrame.id)}
+              onExplore={
+                childrenOf(presentation, currentFrame.id).length
+                  ? () => exploreSlide(currentFrame.id)
+                  : undefined
+              }
             />
           )}
           {currentFrame?.parentId && (

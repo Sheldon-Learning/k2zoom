@@ -5,6 +5,8 @@ interface Props {
   title: string
   childCount: number
   onExplore?: () => void
+  actionLabel?: string
+  showAddIndicator?: boolean
   className?: string
   style?: CSSProperties
 }
@@ -14,6 +16,8 @@ export function SlideNumber({
   title,
   childCount,
   onExplore,
+  actionLabel,
+  showAddIndicator,
   className,
   style,
 }: Props) {
@@ -22,7 +26,7 @@ export function SlideNumber({
       type="button"
       className={`slide-number ${className ?? ''}`}
       style={style}
-      disabled={!childCount || !onExplore}
+      disabled={!onExplore}
       onClick={(event) => {
         event.stopPropagation()
         onExplore?.()
@@ -31,15 +35,19 @@ export function SlideNumber({
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
       }}
-      aria-label={`Slide ${number}, ${title}${childCount ? `, contient ${childCount} sous-slides. Explorer cette section` : ''}`}
+      aria-label={
+        actionLabel ??
+        `Slide ${number}, ${title}${childCount ? `, contient ${childCount} sous-slides. Explorer cette section` : ''}`
+      }
       title={
-        childCount
+        actionLabel ??
+        (childCount
           ? `${childCount} slide${childCount > 1 ? 's' : ''} supplémentaire${childCount > 1 ? 's' : ''}`
-          : undefined
+          : undefined)
       }
     >
       {number}
-      {childCount > 0 && (
+      {(childCount > 0 || showAddIndicator) && (
         <span aria-hidden="true" className="slide-number-indicator">
           +
         </span>

@@ -580,6 +580,54 @@ input:focus-visible {
   border-color: #ffffff70;
   background: #ffffff18;
 }
+.slide-number-menu {
+  position: absolute;
+  top: 91px;
+  right: 24px;
+  z-index: 16;
+  display: grid;
+  gap: 7px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--control-line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 14px 38px #06142335;
+}
+.slide-number-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.slide-number-menu-heading strong {
+  color: var(--accent);
+}
+.slide-number-menu button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--foreground);
+  font:
+    700 11px Manrope,
+    sans-serif;
+  cursor: pointer;
+}
+.slide-number-menu button:hover,
+.slide-number-menu button:focus-visible {
+  border-color: var(--accent);
+}
+.slide-number-menu-heading button {
+  flex: 0 0 28px;
+  min-height: 28px;
+  padding: 0;
+  font-size: 18px;
+}
 .canvas-element {
   position: absolute;
   display: flex;
@@ -1741,7 +1789,7 @@ input:focus-visible {
   );
   --canvas-glow-one: #ffffffb0;
   --canvas-glow-two: #c7e8df8c;
-  --frame-background: #ffffffed;
+  --frame-background: #ffffff;
   --heading-color: #172736;
   --body-color: #5e7281;
   --eyebrow-color: #296eab;
@@ -1762,7 +1810,7 @@ input:focus-visible {
     #1b3039 50%,
     #122630 100%
   );
-  --frame-background: #263a42f2;
+  --frame-background: #ffffff;
   --heading-color: #f3faf9;
   --body-color: #c7d9dc;
   --eyebrow-color: #a8e2c9;
@@ -1780,7 +1828,7 @@ input:focus-visible {
   --canvas-background: #000000;
   --canvas-glow-one: transparent;
   --canvas-glow-two: transparent;
-  --frame-background: #101314f5;
+  --frame-background: #ffffff;
   --heading-color: #ffffff;
   --body-color: #d9e0de;
   --eyebrow-color: #d0e7dc;
@@ -1801,7 +1849,7 @@ input:focus-visible {
     #164473 48%,
     #0d3059 100%
   );
-  --frame-background: #173d68f2;
+  --frame-background: #ffffff;
   --heading-color: #f4f9ff;
   --body-color: #cbdff6;
   --eyebrow-color: #b9dcff;
@@ -1951,6 +1999,18 @@ input:focus-visible {
 .app[data-theme='sapphire']
   .canvas-element.text-eyebrow:not(.text-custom-color) {
   color: var(--eyebrow-color) !important;
+}
+.app[data-theme]
+  .canvas-element.text-on-frame.text-heading:not(.text-custom-color) {
+  color: #172736 !important;
+}
+.app[data-theme]
+  .canvas-element.text-on-frame.text-body:not(.text-custom-color) {
+  color: #40545c !important;
+}
+.app[data-theme]
+  .canvas-element.text-on-frame.text-eyebrow:not(.text-custom-color) {
+  color: #296eab !important;
 }
 .app[data-theme] .timeline-preview {
   border-color: var(--line);
