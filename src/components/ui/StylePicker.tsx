@@ -9,63 +9,145 @@ interface Props {
   onClose: () => void
 }
 
-const paths: Partial<Record<PresentationStyle, string>> = {
-  story: 'M 18 60 L 75 26 L 132 66',
-  timeline: 'M 12 48 L 140 48',
-  orbit: 'M 75 10 A 54 38 0 1 1 74 10',
-  grid: 'M 17 25 L 49 25 L 82 25 L 115 25 L 115 65 L 82 65 L 49 65 L 17 65',
-  spiral: 'M 75 46 C 60 30 100 17 115 44 C 137 82 38 86 24 53',
-  zigzag: 'M 25 18 L 124 42 L 25 67 L 124 83',
+type SpatialStyle =
+  'story' | 'timeline' | 'orbit' | 'grid' | 'spiral' | 'zigzag'
+
+const spatialPreviews: Record<
+  SpatialStyle,
+  { route: string; slides: [number, number][] }
+> = {
+  story: {
+    route: 'M 30 73 L 118 27 L 207 72',
+    slides: [
+      [30, 73],
+      [118, 27],
+      [207, 72],
+    ],
+  },
+  timeline: {
+    route: 'M 28 52 H 213',
+    slides: [
+      [28, 52],
+      [90, 52],
+      [151, 52],
+      [213, 52],
+    ],
+  },
+  orbit: {
+    route:
+      'M 120 20 C 173 20 208 32 208 52 C 208 78 163 89 120 89 C 75 89 32 78 32 52 C 32 32 73 20 120 20 Z',
+    slides: [
+      [120, 20],
+      [208, 52],
+      [120, 89],
+      [32, 52],
+    ],
+  },
+  grid: {
+    route: 'M 25 31 H 216 V 75 H 25',
+    slides: [
+      [25, 31],
+      [88, 31],
+      [152, 31],
+      [216, 31],
+      [216, 75],
+      [152, 75],
+      [88, 75],
+      [25, 75],
+    ],
+  },
+  spiral: {
+    route:
+      'M 117 46 C 109 28 133 19 151 31 C 177 48 162 79 125 82 C 83 86 54 67 66 41 C 73 27 86 24 95 25',
+    slides: [
+      [117, 46],
+      [151, 31],
+      [162, 72],
+      [96, 80],
+      [66, 41],
+    ],
+  },
+  zigzag: {
+    route: 'M 35 25 H 202 L 35 52 H 202 L 35 79 H 202',
+    slides: [
+      [35, 25],
+      [202, 25],
+      [35, 52],
+      [202, 52],
+      [35, 79],
+      [202, 79],
+    ],
+  },
 }
 
 const previewColors = ['#123b82', '#f20b68', '#2cc5df', '#ffbf18', '#13b7a3']
 
+function SpatialStyleArt({ style }: { style: SpatialStyle }) {
+  const preview = spatialPreviews[style]
+  return (
+    <span className={`style-art style-art-spatial style-art-${style}`}>
+      <svg viewBox="0 0 240 104" aria-hidden="true">
+        <path
+          d={preview.route}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="4 5"
+          opacity=".52"
+        />
+        {preview.slides.map(([x, y], index) => {
+          const color = previewColors[index % previewColors.length]
+          return (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+              <rect
+                x="-20"
+                y="-15"
+                width="40"
+                height="30"
+                rx="5"
+                fill="white"
+                stroke={color}
+                strokeWidth="1.4"
+              />
+              <rect
+                x="-16"
+                y="-11"
+                width="32"
+                height="20"
+                rx="2.5"
+                fill={color}
+                opacity=".9"
+              />
+              <circle cx="6" cy="-6" r="3" fill="#ffffffc9" />
+              <path
+                d="M -16 5 Q -8 -3 0 4 T 16 2 V 9 H -16 Z"
+                fill="#ffffffa8"
+              />
+              <rect
+                x="-15"
+                y="11"
+                width="13"
+                height="1.5"
+                rx=".75"
+                fill={color}
+                opacity=".65"
+              />
+            </g>
+          )
+        })}
+      </svg>
+    </span>
+  )
+}
+
 function StyleArt({ style }: { style: PresentationStyle }) {
-  const infographic = [
-    'chevrons',
-    'medallions',
-    'steps',
-    'ribbons',
-    'milestones',
-    'spectrum',
-  ].includes(style)
+  if (style in spatialPreviews)
+    return <SpatialStyleArt style={style as SpatialStyle} />
   return (
     <span className={`style-art style-art-${style}`}>
       <svg viewBox="0 0 150 100" aria-hidden="true">
-        {!infographic && (
-          <>
-            <path
-              d={paths[style]}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={style === 'grid' ? '5 4' : undefined}
-            />
-            {style === 'grid'
-              ? Array.from({ length: 8 }, (_, index) => (
-                  <rect
-                    key={index}
-                    x={11 + (index % 4) * 33}
-                    y={17 + Math.floor(index / 4) * 40}
-                    width="13"
-                    height="15"
-                    rx="3"
-                    fill="currentColor"
-                  />
-                ))
-              : [0, 1, 2].map((index) => (
-                  <circle
-                    key={index}
-                    cx={25 + index * 49}
-                    cy={style === 'timeline' ? 48 : index % 2 ? 30 : 66}
-                    r="7"
-                    fill="currentColor"
-                  />
-                ))}
-          </>
-        )}
         {style === 'chevrons' &&
           previewColors.map((color, index) => (
             <g key={color}>

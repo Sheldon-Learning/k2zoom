@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, WheelEvent } from 'react'
-import { Hand, Minus, Play, Plus, RotateCw, Scan, Trash2 } from 'lucide-react'
+import {
+  Hand,
+  Maximize2,
+  Minus,
+  Play,
+  Plus,
+  RotateCw,
+  Scan,
+  Trash2,
+} from 'lucide-react'
 import type { CameraController } from '../../engine/CameraController'
 import {
   textPositionAfterDrag,
   textRotationAfterDrag,
 } from '../../engine/textGeometry'
+import {
+  imageSizeAfterDrag,
+  resizeImageByFactor,
+} from '../../engine/imageResize'
 import type {
   Camera,
   ImageElement,
@@ -95,6 +108,15 @@ export function InfiniteCanvas({
     startRotation: number
   } | null>(null)
   const stopTrackingImageRotation = useRef<(() => void) | null>(null)
+  const imageResize = useRef<{
+    id: string
+    pointerId: number
+    clientX: number
+    clientY: number
+    image: ImageElement
+    camera: Camera
+  } | null>(null)
+  const stopTrackingImageResize = useRef<(() => void) | null>(null)
   const suppressImageClick = useRef<string | null>(null)
   const [grabbing, setGrabbing] = useState(false)
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
@@ -106,6 +128,7 @@ export function InfiniteCanvas({
       stopTrackingRotation.current?.()
       stopTrackingImageDrag.current?.()
       stopTrackingImageRotation.current?.()
+      stopTrackingImageResize.current?.()
       controller.stop()
     },
     [controller],
@@ -399,6 +422,54 @@ export function InfiniteCanvas({
     }
   }
 
+  function startImageResize(
+    event: PointerEvent<HTMLButtonElement>,
+    image: ImageElement,
+  ) {
+    event.stopPropagation()
+    event.preventDefault()
+    if (event.button !== 0 || !onUpdateImage) return
+    imageResize.current = {
+      id: image.id,
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      image,
+      camera: useEditorStore.getState().camera,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    stopTrackingImageResize.current?.()
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const gesture = imageResize.current
+      if (!gesture || gesture.pointerId !== moveEvent.pointerId) return
+      onUpdateImage(
+        gesture.id,
+        imageSizeAfterDrag(
+          gesture.image,
+          {
+            x: moveEvent.clientX - gesture.clientX,
+            y: moveEvent.clientY - gesture.clientY,
+          },
+          gesture.camera,
+        ),
+      )
+    }
+    const onEnd = (endEvent: globalThis.PointerEvent) => {
+      if (imageResize.current?.pointerId !== endEvent.pointerId) return
+      imageResize.current = null
+      stopTrackingImageResize.current?.()
+      stopTrackingImageResize.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    stopTrackingImageResize.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+  }
+
   return (
     <div
       className={`canvas-viewport style-${presentation.style ?? 'story'} ${grabbing ? 'is-grabbing' : ''}`}
@@ -614,18 +685,48 @@ export function InfiniteCanvas({
                 {selectedImageId === element.id &&
                   !presenting &&
                   onUpdateImage && (
-                    <button
-                      type="button"
-                      className="image-rotate-handle"
-                      aria-label="Tourner l’image"
-                      title="Glisser pour tourner l’image"
-                      onPointerDown={(event) =>
-                        startImageRotation(event, element)
-                      }
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <RotateCw size={16} />
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="image-rotate-handle"
+                        aria-label="Tourner l’image"
+                        title="Glisser pour tourner l’image"
+                        onPointerDown={(event) =>
+                          startImageRotation(event, element)
+                        }
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <RotateCw size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="image-resize-handle"
+                        aria-label="Redimensionner l’image"
+                        title="Glisser pour agrandir ou réduire l’image ; flèches gauche et droite au clavier"
+                        onPointerDown={(event) =>
+                          startImageResize(event, element)
+                        }
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key !== 'ArrowRight' &&
+                            event.key !== 'ArrowLeft'
+                          )
+                            return
+                          event.preventDefault()
+                          event.stopPropagation()
+                          onUpdateImage(
+                            element.id,
+                            resizeImageByFactor(
+                              element,
+                              event.key === 'ArrowRight' ? 1.05 : 0.95,
+                            ),
+                          )
+                        }}
+                      >
+                        <Maximize2 size={16} />
+                      </button>
+                    </>
                   )}
               </>
             ) : element.type === 'video' ? (
