@@ -47,6 +47,11 @@ export function parsePresentation(json: string): Presentation {
   ) {
     throw new Error('Invalid presentation style')
   }
+  if (
+    value.frameShape !== undefined &&
+    !['rectangle', 'circle'].includes(value.frameShape)
+  )
+    throw new Error('Invalid frame shape')
   const isNumber = (number: unknown): number is number =>
     typeof number === 'number' && Number.isFinite(number)
   const isBox = (item: Record<string, unknown>) =>
@@ -123,7 +128,24 @@ export function parsePresentation(json: string): Presentation {
             ? ['circle', 'rect'].includes(String(element.shape)) &&
               typeof element.fill === 'string'
             : element.type === 'image'
-              ? isImageSource(element.src) && typeof element.alt === 'string'
+              ? isImageSource(element.src) &&
+                typeof element.alt === 'string' &&
+                (element.frameId === undefined ||
+                  typeof element.frameId === 'string') &&
+                (element.fit === undefined ||
+                  ['cover', 'contain'].includes(String(element.fit))) &&
+                (element.objectPositionX === undefined ||
+                  (isNumber(element.objectPositionX) &&
+                    element.objectPositionX >= 0 &&
+                    element.objectPositionX <= 100)) &&
+                (element.objectPositionY === undefined ||
+                  (isNumber(element.objectPositionY) &&
+                    element.objectPositionY >= 0 &&
+                    element.objectPositionY <= 100)) &&
+                (element.cropZoom === undefined ||
+                  (isNumber(element.cropZoom) &&
+                    element.cropZoom >= 1 &&
+                    element.cropZoom <= 3))
               : element.type === 'video' &&
                 (element.frameId === undefined ||
                   typeof element.frameId === 'string') &&

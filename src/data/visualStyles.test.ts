@@ -4,6 +4,7 @@ import {
   buildVisualPresentation,
   demoGallery,
   galleryFromPresentation,
+  visualStyles,
 } from './visualStyles'
 import { demoPresentation } from './demo'
 import type { TextElement } from '../types/presentation'
@@ -57,6 +58,28 @@ describe('visual presentation layouts', () => {
       new Set(presentation.frames.map((frame) => `${frame.x},${frame.y}`)).size,
     ).toBe(8)
   })
+
+  it.each(visualStyles.map((style) => style.id))(
+    'creates a circular-frame version of %s',
+    (style) => {
+      const presentation = buildVisualPresentation(
+        style,
+        demoGallery.slice(0, 4),
+        'Cercles',
+        undefined,
+        'circle',
+      )
+      expect(presentation.frameShape).toBe('circle')
+      expect(
+        presentation.frames.every(
+          (frame) => frame.width === 400 && frame.height === 400,
+        ),
+      ).toBe(true)
+      expect(
+        presentation.elements.filter((element) => element.type === 'image'),
+      ).toHaveLength(4)
+    },
+  )
 
   it.each([
     'chevrons',

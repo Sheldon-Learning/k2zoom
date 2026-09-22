@@ -43,6 +43,19 @@ describe('presentation JSON', () => {
     const gallery = buildVisualPresentation(style, demoGallery)
     expect(parsePresentation(JSON.stringify(gallery))).toEqual(gallery)
   })
+  it('round trips circular frames and rejects unknown frame shapes', () => {
+    const circles = buildVisualPresentation(
+      'grid',
+      demoGallery.slice(0, 3),
+      'Cercles',
+      undefined,
+      'circle',
+    )
+    expect(parsePresentation(JSON.stringify(circles))).toEqual(circles)
+    expect(() =>
+      parsePresentation(JSON.stringify({ ...circles, frameShape: 'triangle' })),
+    ).toThrow('Invalid frame shape')
+  })
   it.each([
     'chevrons',
     'medallions',
@@ -114,5 +127,27 @@ describe('presentation JSON', () => {
       ),
     }
     expect(() => parsePresentation(JSON.stringify(invalidEffect))).toThrow()
+  })
+  it('keeps image crop settings in exported presentations', () => {
+    const presentation = buildVisualPresentation(
+      'grid',
+      demoGallery.slice(0, 1),
+    )
+    const cropped = {
+      ...presentation,
+      elements: presentation.elements.map((element) =>
+        element.type === 'image'
+          ? {
+              ...element,
+              frameId: presentation.frames[0].id,
+              fit: 'cover' as const,
+              objectPositionX: 28,
+              objectPositionY: 72,
+              cropZoom: 1.4,
+            }
+          : element,
+      ),
+    }
+    expect(parsePresentation(JSON.stringify(cropped))).toEqual(cropped)
   })
 })

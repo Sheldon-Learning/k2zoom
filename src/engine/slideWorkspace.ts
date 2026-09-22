@@ -37,6 +37,7 @@ export function workspacePresentation(
       : presentation.frames.filter((frame) => !frame.parentId),
     path: nested ? siblings.map((frame) => frame.id) : presentation.path,
     style: nested ? 'story' : presentation.style,
+    frameShape: nested ? 'rectangle' : presentation.frameShape,
     elements: presentation.elements.filter((element) => {
       const owner = ownerId(element, presentation)
       return nested

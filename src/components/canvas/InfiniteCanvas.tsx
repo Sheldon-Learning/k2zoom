@@ -19,6 +19,11 @@ import {
   imageSizeAfterDrag,
   resizeImageByFactor,
 } from '../../engine/imageResize'
+import {
+  fitImageToFrame,
+  frameAtPoint,
+  imageCropAfterDrag,
+} from '../../engine/imageFrame'
 import type {
   CanvasElement,
   Camera,
@@ -42,12 +47,14 @@ interface Props {
   selectedTextId?: string | null
   selectedImageId?: string | null
   selectedElementId?: string | null
+  selectedFrameId?: string | null
   onSelectText?: (element: TextElement) => void
   onUpdateText?: (id: string, changes: Partial<TextElement>) => void
   onDeleteText?: (id: string) => void
   onSelectImage?: (element: ImageElement) => void
   onUpdateImage?: (id: string, changes: Partial<ImageElement>) => void
   onSelectElement?: (element: CanvasElement) => void
+  onSelectFrame?: (frame: Presentation['frames'][number]) => void
   onClearSelection?: () => void
   onExploreSlide?: (id: string) => void
   onDoubleClickSlideNumber?: (id: string) => void
@@ -63,12 +70,14 @@ export function InfiniteCanvas({
   selectedTextId,
   selectedImageId,
   selectedElementId,
+  selectedFrameId,
   onSelectText,
   onUpdateText,
   onDeleteText,
   onSelectImage,
   onUpdateImage,
   onSelectElement,
+  onSelectFrame,
   onClearSelection,
   onExploreSlide,
   onDoubleClickSlideNumber,
@@ -130,6 +139,9 @@ export function InfiniteCanvas({
     y: number
     camera: Camera
     moved: boolean
+    fittedFrame?: Presentation['frames'][number]
+    objectPositionX: number
+    objectPositionY: number
   } | null>(null)
   const stopTrackingImageDrag = useRef<(() => void) | null>(null)
   const imageRotation = useRef<{
@@ -371,6 +383,10 @@ export function InfiniteCanvas({
     if (imageClickTimer.current) clearTimeout(imageClickTimer.current)
     imageClickTimer.current = null
     event.currentTarget.setPointerCapture(event.pointerId)
+    const fittedFrame =
+      image.fit && image.frameId
+        ? presentation.frames.find((frame) => frame.id === image.frameId)
+        : undefined
     imageDrag.current = {
       id: image.id,
       pointerId: event.pointerId,
@@ -380,6 +396,9 @@ export function InfiniteCanvas({
       y: image.y,
       camera: useEditorStore.getState().camera,
       moved: false,
+      fittedFrame,
+      objectPositionX: image.objectPositionX ?? 50,
+      objectPositionY: image.objectPositionY ?? 50,
     }
     stopTrackingImageDrag.current?.()
     const onMove = (moveEvent: globalThis.PointerEvent) => {
@@ -391,19 +410,54 @@ export function InfiniteCanvas({
       }
       if (Math.hypot(delta.x, delta.y) < 3 && !gesture.moved) return
       gesture.moved = true
-      onUpdateImage(
-        gesture.id,
-        textPositionAfterDrag(
-          { x: gesture.x, y: gesture.y },
-          delta,
-          gesture.camera,
-        ),
-      )
+      if (gesture.fittedFrame)
+        onUpdateImage(
+          gesture.id,
+          imageCropAfterDrag(
+            {
+              objectPositionX: gesture.objectPositionX,
+              objectPositionY: gesture.objectPositionY,
+            },
+            delta,
+            gesture.fittedFrame,
+            gesture.camera.zoom,
+          ),
+        )
+      else
+        onUpdateImage(
+          gesture.id,
+          textPositionAfterDrag(
+            { x: gesture.x, y: gesture.y },
+            delta,
+            gesture.camera,
+          ),
+        )
     }
     const onEnd = (endEvent: globalThis.PointerEvent) => {
       const gesture = imageDrag.current
       if (!gesture || gesture.pointerId !== endEvent.pointerId) return
-      if (gesture.moved) suppressImageClick.current = gesture.id
+      if (gesture.moved) {
+        suppressImageClick.current = gesture.id
+        if (!gesture.fittedFrame) {
+          const position = textPositionAfterDrag(
+            { x: gesture.x, y: gesture.y },
+            {
+              x: endEvent.clientX - gesture.clientX,
+              y: endEvent.clientY - gesture.clientY,
+            },
+            gesture.camera,
+          )
+          const target = frameAtPoint(
+            presentation.frames,
+            {
+              x: position.x + image.width / 2,
+              y: position.y + image.height / 2,
+            },
+            presentation.frameShape,
+          )
+          if (target) onUpdateImage(gesture.id, fitImageToFrame(image, target))
+        }
+      }
       imageDrag.current = null
       stopTrackingImageDrag.current?.()
       stopTrackingImageDrag.current = null
@@ -520,7 +574,7 @@ export function InfiniteCanvas({
 
   return (
     <div
-      className={`canvas-viewport style-${presentation.style ?? 'story'} ${nestedPage ? `nested-workspace nested-style-${nestedPageStyle}` : ''} ${grabbing ? 'is-grabbing' : ''}`}
+      className={`canvas-viewport style-${presentation.style ?? 'story'} frame-shape-${presentation.frameShape ?? 'rectangle'} ${nestedPage ? `nested-workspace nested-style-${nestedPageStyle}` : ''} ${grabbing ? 'is-grabbing' : ''}`}
       ref={viewportRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -546,8 +600,39 @@ export function InfiniteCanvas({
         )}
         {presentation.frames.map((frame, index) => (
           <div
-            className={`canvas-frame ${nestedPage ? `page-style-${frame.pageStyle ?? 'paper'}` : ''}`}
+            className={`canvas-frame ${selectedFrameId === frame.id ? 'frame-selected' : ''} ${nestedPage ? `page-style-${frame.pageStyle ?? 'paper'}` : ''}`}
             key={frame.id}
+            role={onSelectFrame ? 'button' : undefined}
+            tabIndex={onSelectFrame ? 0 : undefined}
+            aria-label={
+              onSelectFrame ? `Sélectionner la slide ${frame.name}` : undefined
+            }
+            onPointerDown={
+              onSelectFrame
+                ? (event) => {
+                    event.stopPropagation()
+                    onSelectFrame(frame)
+                  }
+                : undefined
+            }
+            onClick={
+              onSelectFrame
+                ? (event) => {
+                    event.stopPropagation()
+                    onSelectFrame(frame)
+                  }
+                : undefined
+            }
+            onKeyDown={
+              onSelectFrame
+                ? (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onSelectFrame(frame)
+                  }
+                : undefined
+            }
             style={
               {
                 left: frame.x,
@@ -603,7 +688,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'} ${selectedElementId === element.id && !presenting ? 'element-selected' : ''}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${element.frameId && element.fit ? 'image-framed' : ''} ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'} ${selectedElementId === element.id && !presenting ? 'element-selected' : ''}`}
             role={
               element.type === 'image' ||
               (element.type === 'text' &&
@@ -659,6 +744,10 @@ export function InfiniteCanvas({
                       return
                     }
                     if (event.detail !== 1) return
+                    if (!presenting && onSelectImage) {
+                      onSelectImage(element)
+                      return
+                    }
                     if (imageClickTimer.current)
                       clearTimeout(imageClickTimer.current)
                     imageClickTimer.current = setTimeout(() => {
@@ -696,7 +785,8 @@ export function InfiniteCanvas({
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
                       event.stopPropagation()
-                      focusImage(element)
+                      if (!presenting && onSelectImage) onSelectImage(element)
+                      else focusImage(element)
                     }
                     if (event.key === 'Backspace') {
                       event.preventDefault()
@@ -802,10 +892,20 @@ export function InfiniteCanvas({
               </>
             ) : element.type === 'image' ? (
               <>
-                <img src={element.src} alt={element.alt} draggable={false} />
+                <img
+                  src={element.src}
+                  alt={element.alt}
+                  draggable={false}
+                  style={{
+                    objectFit: element.fit ?? 'cover',
+                    objectPosition: `${element.objectPositionX ?? 50}% ${element.objectPositionY ?? 50}%`,
+                    transform: `scale(${element.cropZoom ?? 1})`,
+                  }}
+                />
                 {selectedImageId === element.id &&
                   !presenting &&
-                  onUpdateImage && (
+                  onUpdateImage &&
+                  !(element.frameId && element.fit) && (
                     <>
                       <button
                         type="button"

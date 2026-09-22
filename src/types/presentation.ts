@@ -66,6 +66,10 @@ export interface ImageElement extends BaseElement {
   frameId?: string
   src: string
   alt: string
+  fit?: 'cover' | 'contain'
+  objectPositionX?: number
+  objectPositionY?: number
+  cropZoom?: number
 }
 
 export interface VideoElement extends BaseElement {
@@ -108,4 +112,5 @@ export interface Presentation {
   frames: Frame[]
   path: string[]
   style?: PresentationStyle
+  frameShape?: 'rectangle' | 'circle'
 }

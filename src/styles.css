@@ -437,6 +437,22 @@ input:focus-visible {
   border-radius: 16px;
   opacity: 0.58;
 }
+.canvas-frame[role='button'] {
+  cursor: pointer;
+}
+.canvas-frame.frame-selected {
+  outline: 4px solid var(--frame-accent);
+  outline-offset: 7px;
+}
+.canvas-frame.frame-selected:after {
+  position: absolute;
+  inset: -13px;
+  border: 1px solid color-mix(in srgb, var(--frame-accent) 42%, transparent);
+  border-radius: inherit;
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--frame-accent) 12%, transparent);
+  content: '';
+  pointer-events: none;
+}
 .frame-label {
   position: absolute;
   top: -39px;
@@ -799,6 +815,21 @@ input:focus-visible {
   outline-offset: 5px;
   cursor: move;
 }
+.image-element.image-framed {
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: inset 0 0 0 1px #ffffff80;
+}
+.image-element.image-framed.image-selected {
+  overflow: hidden;
+  cursor: move;
+}
+.text-element,
+.canvas-element.shape-circle,
+.canvas-element.shape-rect {
+  z-index: 1;
+}
 .image-rotate-handle {
   position: absolute;
   top: -56px;
@@ -924,6 +955,7 @@ input:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 160ms ease-out;
 }
 .canvas-viewport:not(.style-story) .text-body {
   font-family: Manrope, sans-serif;
@@ -1293,6 +1325,143 @@ input:focus-visible {
   color: var(--foreground);
   box-shadow: 0 16px 45px #0004;
 }
+.image-editor {
+  position: absolute;
+  top: 78px;
+  right: 16px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 310px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  color: var(--foreground);
+  box-shadow: 0 20px 55px #0000002b;
+  backdrop-filter: blur(24px) saturate(150%);
+}
+.image-editor-heading,
+.image-editor-heading > div,
+.image-editor label {
+  display: flex;
+}
+.image-editor-heading {
+  align-items: center;
+  justify-content: space-between;
+}
+.image-editor-heading > div {
+  flex-direction: column;
+  gap: 2px;
+}
+.image-editor-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--subtle);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+}
+.image-editor-heading strong {
+  font:
+    800 16px Manrope,
+    sans-serif;
+}
+.image-editor-heading button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid var(--control-line);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  color: var(--foreground);
+}
+.image-editor-preview {
+  position: relative;
+  height: 145px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+.image-editor-preview img {
+  width: 100%;
+  height: 100%;
+}
+.image-editor-preview > span {
+  position: absolute;
+  left: 9px;
+  bottom: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #111827b8;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.image-editor-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: var(--surface-raised);
+}
+.image-editor-modes button {
+  height: 33px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.image-editor-modes button.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 2px 9px #00000018;
+}
+.image-editor label {
+  flex-direction: column;
+  gap: 7px;
+}
+.image-editor input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.image-editor p {
+  margin: -2px 0 0;
+  color: var(--subtle);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.image-editor-replace,
+.image-editor-unlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.image-editor-replace {
+  border: 0;
+  background: var(--accent);
+  color: var(--surface);
+}
+.image-editor-unlink {
+  border: 1px solid var(--control-line);
+  background: transparent;
+  color: var(--muted);
+}
 .text-editor-heading,
 .text-editor-section,
 .text-editor-row {
@@ -1626,6 +1795,62 @@ input:focus-visible {
   color: #81928b;
   font-size: 13px;
 }
+.frame-shape-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -7px 0 24px;
+  padding: 8px 9px 8px 15px;
+  border: 1px solid #e7ebe9;
+  border-radius: 16px;
+  background: #f6f8f7;
+}
+.frame-shape-picker > span {
+  color: #7b8d87;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.25px;
+}
+.frame-shape-picker > div {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #e9edeb;
+}
+.frame-shape-picker button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #687972;
+  font-size: 11px;
+  font-weight: 700;
+}
+.frame-shape-picker button.active {
+  background: #fff;
+  color: #173e34;
+  box-shadow:
+    0 1px 2px #10271f12,
+    0 4px 12px #10271f12;
+}
+.frame-shape-icon {
+  display: block;
+  width: 14px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+.frame-shape-icon.shape-circle {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+}
 .style-group + .style-group {
   margin-top: 24px;
 }
@@ -1753,6 +1978,21 @@ input:focus-visible {
 }
 .canvas-viewport.style-orbit-scarlet .canvas-grid {
   background: radial-gradient(circle at 50% 50%, #3a090b 0, #0b0203 72%);
+}
+.canvas-viewport.frame-shape-circle .canvas-frame {
+  border-radius: 50% !important;
+}
+.canvas-viewport.frame-shape-circle .canvas-frame:before {
+  border-radius: 50%;
+}
+.canvas-viewport.frame-shape-circle .image-element,
+.canvas-viewport.frame-shape-circle .video-element {
+  overflow: hidden;
+  border-radius: 30px;
+  box-shadow: 0 18px 44px #11182720;
+}
+.canvas-viewport.frame-shape-circle .image-element.image-framed {
+  border-radius: 50%;
 }
 .style-art-timeline {
   background: #e6f4ee;

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ArrowRight, Images, X } from 'lucide-react'
 import {
   circleStyleThemes,
@@ -9,7 +10,11 @@ import type { PresentationStyle } from '../../types/presentation'
 
 interface Props {
   selected: PresentationStyle
-  onSelect: (style: PresentationStyle) => void
+  selectedShape: 'rectangle' | 'circle'
+  onSelect: (
+    style: PresentationStyle,
+    frameShape: 'rectangle' | 'circle',
+  ) => void
   onUpload: () => void
   onClose: () => void
 }
@@ -87,7 +92,13 @@ const spatialPreviews: Record<
 
 const previewColors = ['#123b82', '#f20b68', '#2cc5df', '#ffbf18', '#13b7a3']
 
-function SpatialStyleArt({ style }: { style: SpatialStyle }) {
+function SpatialStyleArt({
+  style,
+  frameShape,
+}: {
+  style: SpatialStyle
+  frameShape: 'rectangle' | 'circle'
+}) {
   const preview = spatialPreviews[style]
   return (
     <span className={`style-art style-art-spatial style-art-${style}`}>
@@ -106,25 +117,39 @@ function SpatialStyleArt({ style }: { style: SpatialStyle }) {
           const color = previewColors[index % previewColors.length]
           return (
             <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
-              <rect
-                x="-20"
-                y="-15"
-                width="40"
-                height="30"
-                rx="5"
-                fill="white"
-                stroke={color}
-                strokeWidth="1.4"
-              />
-              <rect
-                x="-16"
-                y="-11"
-                width="32"
-                height="20"
-                rx="2.5"
-                fill={color}
-                opacity=".9"
-              />
+              {frameShape === 'circle' ? (
+                <>
+                  <circle
+                    r="16"
+                    fill="white"
+                    stroke={color}
+                    strokeWidth="1.4"
+                  />
+                  <circle r="12" fill={color} opacity=".9" />
+                </>
+              ) : (
+                <>
+                  <rect
+                    x="-20"
+                    y="-15"
+                    width="40"
+                    height="30"
+                    rx="5"
+                    fill="white"
+                    stroke={color}
+                    strokeWidth="1.4"
+                  />
+                  <rect
+                    x="-16"
+                    y="-11"
+                    width="32"
+                    height="20"
+                    rx="2.5"
+                    fill={color}
+                    opacity=".9"
+                  />
+                </>
+              )}
               <circle cx="6" cy="-6" r="3" fill="#ffffffc9" />
               <path
                 d="M -16 5 Q -8 -3 0 4 T 16 2 V 9 H -16 Z"
@@ -147,7 +172,13 @@ function SpatialStyleArt({ style }: { style: SpatialStyle }) {
   )
 }
 
-function CircleStyleArt({ style }: { style: CirclePresentationStyle }) {
+function CircleStyleArt({
+  style,
+  frameShape,
+}: {
+  style: CirclePresentationStyle
+  frameShape: 'rectangle' | 'circle'
+}) {
   const theme = circleStyleThemes[style]
   const gradientId = `circle-gradient-${style}`
   const glowId = `circle-glow-${style}`
@@ -207,16 +238,25 @@ function CircleStyleArt({ style }: { style: CirclePresentationStyle }) {
         )}
         {points.map(({ x, y }, index) => (
           <g key={index} transform={`translate(${x} ${y})`}>
-            <rect
-              x="-11"
-              y="-8"
-              width="22"
-              height="16"
-              rx="4"
-              fill="#ffffffef"
-              stroke={index % 2 ? theme.secondary : theme.primary}
-              strokeWidth="1"
-            />
+            {frameShape === 'circle' ? (
+              <circle
+                r="10"
+                fill="#ffffffef"
+                stroke={index % 2 ? theme.secondary : theme.primary}
+                strokeWidth="1"
+              />
+            ) : (
+              <rect
+                x="-11"
+                y="-8"
+                width="22"
+                height="16"
+                rx="4"
+                fill="#ffffffef"
+                stroke={index % 2 ? theme.secondary : theme.primary}
+                strokeWidth="1"
+              />
+            )}
             <rect
               x="-7"
               y="-4"
@@ -244,10 +284,19 @@ function CircleStyleArt({ style }: { style: CirclePresentationStyle }) {
   )
 }
 
-function StyleArt({ style }: { style: PresentationStyle }) {
-  if (isCircleStyle(style)) return <CircleStyleArt style={style} />
+function StyleArt({
+  style,
+  frameShape,
+}: {
+  style: PresentationStyle
+  frameShape: 'rectangle' | 'circle'
+}) {
+  if (isCircleStyle(style))
+    return <CircleStyleArt style={style} frameShape={frameShape} />
   if (style in spatialPreviews)
-    return <SpatialStyleArt style={style as SpatialStyle} />
+    return (
+      <SpatialStyleArt style={style as SpatialStyle} frameShape={frameShape} />
+    )
   return (
     <span className={`style-art style-art-${style}`}>
       <svg viewBox="0 0 150 100" aria-hidden="true">
@@ -390,7 +439,14 @@ function StyleArt({ style }: { style: PresentationStyle }) {
   )
 }
 
-export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
+export function StylePicker({
+  selected,
+  selectedShape,
+  onSelect,
+  onUpload,
+  onClose,
+}: Props) {
+  const [frameShape, setFrameShape] = useState(selectedShape)
   const stylesById = (ids: PresentationStyle[]) =>
     visualStyles.filter((style) => ids.includes(style.id))
   const groups: {
@@ -444,6 +500,27 @@ export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
             suivi par la caméra.
           </p>
         </div>
+        <div className="frame-shape-picker" aria-label="Forme des cadres">
+          <span>FORME DES CADRES</span>
+          <div>
+            <button
+              type="button"
+              className={frameShape === 'rectangle' ? 'active' : ''}
+              aria-pressed={frameShape === 'rectangle'}
+              onClick={() => setFrameShape('rectangle')}
+            >
+              <i className="frame-shape-icon shape-rectangle" /> Rectangles
+            </button>
+            <button
+              type="button"
+              className={frameShape === 'circle' ? 'active' : ''}
+              aria-pressed={frameShape === 'circle'}
+              onClick={() => setFrameShape('circle')}
+            >
+              <i className="frame-shape-icon shape-circle" /> Cercles
+            </button>
+          </div>
+        </div>
         {groups.map((group) => (
           <section className="style-group" key={group.title}>
             <h3>{group.title}</h3>
@@ -451,16 +528,26 @@ export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
               {group.styles.map((style) => (
                 <button
                   key={style.id}
-                  className={`style-card ${selected === style.id ? 'active' : ''}`}
-                  onClick={() => onSelect(style.id)}
-                  aria-pressed={selected === style.id}
+                  className={`style-card ${selected === style.id && (style.id === 'story' || selectedShape === frameShape) ? 'active' : ''}`}
+                  onClick={() =>
+                    onSelect(
+                      style.id,
+                      style.id === 'story' ? 'rectangle' : frameShape,
+                    )
+                  }
+                  aria-pressed={
+                    selected === style.id &&
+                    (style.id === 'story' || selectedShape === frameShape)
+                  }
                 >
-                  <StyleArt style={style.id} />
+                  <StyleArt style={style.id} frameShape={frameShape} />
                   <span className="style-card-name">
                     {style.name}
-                    {selected === style.id && (
-                      <span className="style-selected">Actuel</span>
-                    )}
+                    {selected === style.id &&
+                      (style.id === 'story' ||
+                        selectedShape === frameShape) && (
+                        <span className="style-selected">Actuel</span>
+                      )}
                   </span>
                   <span className="style-card-description">
                     {style.description}

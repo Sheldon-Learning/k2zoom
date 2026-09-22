@@ -34,6 +34,7 @@ import {
 import { StylePicker } from './components/ui/StylePicker'
 import { PageStylePicker } from './components/ui/PageStylePicker'
 import { TextEditor } from './components/ui/TextEditor'
+import { ImageEditor } from './components/ui/ImageEditor'
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher'
 import { VideoDialog } from './components/ui/VideoDialog'
 import { demoPresentation } from './data/demo'
@@ -78,6 +79,7 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null)
   const documentRef = useRef<HTMLInputElement>(null)
   const imageRef = useRef<HTMLInputElement>(null)
+  const replaceImageRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
   const [showHelp, setShowHelp] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -92,6 +94,7 @@ export default function App() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
     null,
   )
+  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
@@ -153,10 +156,15 @@ export default function App() {
   const selectedElement = presentation.elements.find(
     (element) => element.id === selectedElementId,
   )
+  const selectedFrame = presentation.frames.find(
+    (frame) => frame.id === selectedFrameId,
+  )
   const selectedTextId =
     selectedElement?.type === 'text' ? selectedElement.id : null
   const selectedImageId =
     selectedElement?.type === 'image' ? selectedElement.id : null
+  const selectedImage =
+    selectedElement?.type === 'image' ? selectedElement : undefined
   const selectedText = presentation.elements.find(
     (element): element is TextElement =>
       element.type === 'text' && element.id === selectedTextId,
@@ -248,27 +256,72 @@ export default function App() {
     setSelectedElementId(null)
   }
 
-  function deleteSelectedElement() {
-    if (!selectedElementId) return
+  function deleteSelectedItem() {
     const latest = usePresentationStore.getState().presentation
-    if (!latest.elements.some((element) => element.id === selectedElementId)) {
+    if (selectedElementId) {
+      if (
+        !latest.elements.some((element) => element.id === selectedElementId)
+      ) {
+        setSelectedElementId(null)
+        return
+      }
+      replace({
+        ...latest,
+        elements: latest.elements.filter(
+          (element) => element.id !== selectedElementId,
+        ),
+      })
       setSelectedElementId(null)
+      setShowTextEditor(false)
+      setMessage('Élément supprimé')
+      window.setTimeout(() => setMessage(''), 2500)
       return
     }
-    replace({
-      ...latest,
-      elements: latest.elements.filter(
-        (element) => element.id !== selectedElementId,
-      ),
-    })
+
+    if (!selectedFrameId) return
+    const frame = latest.frames.find((item) => item.id === selectedFrameId)
+    if (!frame) {
+      setSelectedFrameId(null)
+      return
+    }
+    const childCount = childrenOf(latest, frame.id).length
+    if (
+      !window.confirm(
+        `Supprimer la slide « ${frame.name.split('·').at(-1)?.trim()} »${childCount ? ` et ses ${childCount} sous-slide${childCount > 1 ? 's' : ''}` : ''} ?`,
+      )
+    )
+      return
+
+    const siblings = childrenOf(latest, frame.parentId)
+    const index = siblings.findIndex((item) => item.id === frame.id)
+    const fallback =
+      siblings[index + 1] ??
+      siblings[index - 1] ??
+      (frame.parentId
+        ? latest.frames.find((item) => item.id === frame.parentId)
+        : undefined)
+    const next = deleteSlide(latest, frame.id)
+    replace(next)
+    setSelectedFrameId(null)
     setSelectedElementId(null)
     setShowTextEditor(false)
-    setMessage('Élément supprimé')
+    if (fallback) {
+      const root = ancestorsOf(next, fallback.id)[0] ?? fallback
+      setActiveFrame(Math.max(0, next.path.indexOf(root.id)))
+      setActiveNestedId(fallback.parentId ? fallback.id : null)
+      controller.focusOn(fallback)
+    } else {
+      setActiveFrame(0)
+      setActiveNestedId(null)
+      controller.fitToScreen(next.frames)
+    }
+    setMessage('Slide supprimée')
     window.setTimeout(() => setMessage(''), 2500)
   }
 
   function selectCanvasElement(element: CanvasElement) {
     setSelectedElementId(element.id)
+    setSelectedFrameId(null)
     if (element.type !== 'text') setShowTextEditor(false)
     if ('frameId' in element && element.frameId) {
       const owner = presentation.frames.find(
@@ -310,6 +363,7 @@ export default function App() {
     }
     replace({ ...presentation, elements: [...presentation.elements, element] })
     setSelectedElementId(element.id)
+    setSelectedFrameId(null)
     setShowTextEditor(true)
   }
 
@@ -332,7 +386,7 @@ export default function App() {
     )
     if (frameIndex >= 0) setActiveFrame(frameIndex)
     setSelectedElementId(element.id)
-    setSelectedElementId(null)
+    setSelectedFrameId(null)
     setShowTextEditor(true)
   }
 
@@ -350,7 +404,24 @@ export default function App() {
 
   function selectImage(image: ImageElement) {
     setSelectedElementId(image.id)
-    setSelectedElementId(null)
+    setSelectedFrameId(null)
+    setShowTextEditor(false)
+  }
+
+  async function replaceSelectedImage(file?: File) {
+    if (!file || !selectedImage) return
+    try {
+      const [replacement] = await prepareImages([file])
+      if (!replacement) return
+      updateImageById(selectedImage.id, {
+        src: replacement.src,
+        alt: replacement.alt || selectedImage.alt,
+      })
+      setMessage('Image remplacée')
+    } catch {
+      setMessage('Impossible de remplacer cette image.')
+    }
+    window.setTimeout(() => setMessage(''), 3500)
   }
 
   async function pasteImages(files: File[]) {
@@ -396,7 +467,7 @@ export default function App() {
         )
       replace(next)
       setSelectedElementId(added.at(-1)?.id ?? null)
-      setSelectedElementId(null)
+      setSelectedFrameId(null)
       setMessage(
         `${added.length} image${added.length > 1 ? 's' : ''} collée${added.length > 1 ? 's' : ''}`,
       )
@@ -434,7 +505,7 @@ export default function App() {
     }
     replace(next)
     setSelectedElementId(copy.id)
-    setSelectedElementId(null)
+    setSelectedFrameId(null)
     setMessage('Image copiée sur le canvas')
     window.setTimeout(() => setMessage(''), 4500)
   }
@@ -478,7 +549,7 @@ export default function App() {
         elements: latest.elements.filter((item) => item.id !== id),
       })
       setSelectedElementId(null)
-      setSelectedElementId(null)
+      setSelectedFrameId(null)
     }
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target
@@ -511,6 +582,7 @@ export default function App() {
             }
             replace({ ...latest, elements: [...latest.elements, copy] })
             setSelectedElementId(copy.id)
+            setSelectedFrameId(null)
           }
         } catch {
           setMessage('Impossible de coller cette image.')
@@ -530,7 +602,12 @@ export default function App() {
     }
   })
 
-  function chooseStyle(style: PresentationStyle) {
+  function chooseStyle(
+    style: PresentationStyle,
+    frameShape: NonNullable<
+      Presentation['frameShape']
+    > = presentation.frameShape ?? 'rectangle',
+  ) {
     if (
       style === 'story' &&
       !presentation.frames.some((frame) => frame.parentId) &&
@@ -563,10 +640,13 @@ export default function App() {
             gallery.length ? gallery : demoGallery,
             presentation.title,
             presentation,
+            frameShape,
           )
     replace(next)
     setActiveFrame(0)
     setActiveNestedId(null)
+    setSelectedElementId(null)
+    setSelectedFrameId(null)
     controller.fitToScreen(next.frames, 650)
     setShowStyles(false)
   }
@@ -614,7 +694,7 @@ export default function App() {
           throw new Error('Stockage local plein : utilisez moins d’images.')
         replace(next)
         setSelectedElementId(added.at(-1)?.id ?? null)
-        setSelectedElementId(null)
+        setSelectedFrameId(null)
         setMessage(
           `${added.length} image${added.length > 1 ? 's' : ''} ajoutée${added.length > 1 ? 's' : ''} à cette page`,
         )
@@ -647,6 +727,7 @@ export default function App() {
           nextGallery,
           presentation.title,
           hasCustomImage ? presentation : undefined,
+          presentation.frameShape ?? 'rectangle',
         )
       }
       if (JSON.stringify(next).length > 3_500_000)
@@ -740,7 +821,7 @@ export default function App() {
     setActiveNestedId(null)
     setNavigationHistory((history) => [...history, frame.id])
     setSelectedElementId(null)
-    setSelectedElementId(null)
+    setSelectedFrameId(null)
     if (viaOverview)
       controller.focusViaOverview(frame, pathFrames, frame.duration)
     else controller.focusOn(frame, frame.duration)
@@ -758,7 +839,7 @@ export default function App() {
     setActiveNestedId(frame.parentId ? id : null)
     setNavigationHistory((history) => [...history, id])
     setSelectedElementId(null)
-    setSelectedElementId(null)
+    setSelectedFrameId(null)
     setNumberMenuFrameId(null)
     const destinationFrames = frame.parentId
       ? childrenOf(presentation, frame.parentId)
@@ -825,7 +906,7 @@ export default function App() {
       if (index >= 0) setActiveFrame(index)
       setActiveNestedId(child.id)
       setSelectedElementId(null)
-      setSelectedElementId(null)
+      setSelectedFrameId(null)
       setNavigationHistory((history) => [...history, id, child.id])
       controller.focusOn(child)
     }
@@ -916,7 +997,7 @@ export default function App() {
           setShowMenu(false)
         } else {
           setSelectedElementId(null)
-          setSelectedElementId(null)
+          setSelectedFrameId(null)
           setCleanMode(false)
         }
         return
@@ -985,15 +1066,16 @@ export default function App() {
               elements: [...presentation.elements, copy],
             })
             setSelectedElementId(copy.id)
+            setSelectedFrameId(null)
           }
           return
         }
         if (
           (event.key === 'Delete' || event.key === 'Backspace') &&
-          selectedElementId
+          (selectedElementId || selectedFrameId)
         ) {
           event.preventDefault()
-          deleteSelectedElement()
+          deleteSelectedItem()
           return
         }
         if (event.key.startsWith('Arrow') && selectedElementId) {
@@ -1121,7 +1203,7 @@ export default function App() {
       setActiveFrame(0)
       setActiveNestedId(null)
       setSelectedElementId(null)
-      setSelectedElementId(null)
+      setSelectedFrameId(null)
       controller.focusOn(imported.frames[0], 0)
       setMessage(`${imported.frames.length} slides créées depuis ${file.name}`)
     } catch (error) {
@@ -1246,6 +1328,7 @@ export default function App() {
                 setShowMenu(false)
                 setShowTextEditor(false)
                 setSelectedElementId(null)
+                setSelectedFrameId(null)
                 setCleanMode(true)
               }}
               aria-label="Masquer les panneaux et agrandir le canvas"
@@ -1279,17 +1362,21 @@ export default function App() {
             <button
               type="button"
               className="button topbar-delete-button"
-              onClick={deleteSelectedElement}
-              disabled={!selectedElement}
+              onClick={deleteSelectedItem}
+              disabled={!selectedElement && !selectedFrame}
               aria-label={
                 selectedElement
                   ? `Supprimer l’élément sélectionné (${selectedElement.type})`
-                  : 'Sélectionnez un élément à supprimer'
+                  : selectedFrame
+                    ? `Supprimer la slide sélectionnée (${selectedFrame.name})`
+                    : 'Sélectionnez une slide ou un élément à supprimer'
               }
               title={
                 selectedElement
                   ? 'Supprimer l’élément sélectionné'
-                  : 'Cliquez sur un élément du canvas'
+                  : selectedFrame
+                    ? 'Supprimer la slide sélectionnée'
+                    : 'Cliquez sur une slide ou un élément du canvas'
               }
             >
               <Trash2 size={16} /> <span>Supprimer</span>
@@ -1619,14 +1706,29 @@ export default function App() {
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
           selectedImageId={!cleanMode ? selectedImageId : null}
           selectedElementId={!cleanMode ? selectedElementId : null}
+          selectedFrameId={!cleanMode ? selectedFrameId : null}
           onSelectText={!cleanMode ? selectText : undefined}
           onUpdateText={!cleanMode ? updateTextById : undefined}
           onDeleteText={!cleanMode ? deleteTextById : undefined}
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
           onSelectElement={!cleanMode ? selectCanvasElement : undefined}
+          onSelectFrame={
+            !cleanMode
+              ? (frame) => {
+                  setSelectedFrameId(frame.id)
+                  setSelectedElementId(null)
+                  setShowTextEditor(false)
+                }
+              : undefined
+          }
           onClearSelection={
-            !cleanMode ? () => setSelectedElementId(null) : undefined
+            !cleanMode
+              ? () => {
+                  setSelectedElementId(null)
+                  setSelectedFrameId(null)
+                }
+              : undefined
           }
           onExploreSlide={handleSlideNumberClick}
           onDoubleClickSlideNumber={handleSlideNumberDoubleClick}
@@ -1760,7 +1862,10 @@ export default function App() {
           visualStyle={!!presentation.style && presentation.style !== 'story'}
           texts={frameTexts}
           selected={selectedText}
-          onSelect={setSelectedElementId}
+          onSelect={(id) => {
+            setSelectedElementId(id)
+            setSelectedFrameId(null)
+          }}
           onTitleChange={updateFrameTitle}
           onChange={updateText}
           onAdd={() => addText()}
@@ -1769,6 +1874,14 @@ export default function App() {
             if (selectedTextId) deleteTextById(selectedTextId)
           }}
           onClose={() => setShowTextEditor(false)}
+        />
+      )}
+      {!presenting && !cleanMode && selectedImage && (
+        <ImageEditor
+          image={selectedImage}
+          onChange={(changes) => updateImageById(selectedImage.id, changes)}
+          onReplace={() => replaceImageRef.current?.click()}
+          onClose={() => setSelectedElementId(null)}
         />
       )}
       {(presenting || cleanMode) && (
@@ -1905,6 +2018,7 @@ export default function App() {
       {showStyles && !presenting && (
         <StylePicker
           selected={presentation.style ?? 'story'}
+          selectedShape={presentation.frameShape ?? 'rectangle'}
           onSelect={chooseStyle}
           onUpload={() => imageRef.current?.click()}
           onClose={() => setShowStyles(false)}
@@ -1960,6 +2074,16 @@ export default function App() {
         hidden
         onChange={(event) => {
           void addImages(event.target.files)
+          event.target.value = ''
+        }}
+      />
+      <input
+        ref={replaceImageRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(event) => {
+          void replaceSelectedImage(event.target.files?.[0])
           event.target.value = ''
         }}
       />

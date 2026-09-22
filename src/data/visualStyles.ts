@@ -412,7 +412,9 @@ function mediaElements(
   id: string,
   media: GalleryMedia,
   place: { x: number; y: number; rotation: number },
+  frameShape: NonNullable<Presentation['frameShape']> = 'rectangle',
 ): CanvasElement[] {
+  const circle = frameShape === 'circle'
   const card =
     media.kind === 'image'
       ? {
@@ -430,10 +432,10 @@ function mediaElements(
   return [
     {
       ...card,
-      x: place.x + 22,
-      y: place.y + 22,
-      width: 396,
-      height: 235,
+      x: place.x + (circle ? 34 : 22),
+      y: place.y + (circle ? 36 : 22),
+      width: circle ? 332 : 396,
+      height: circle ? 244 : 235,
       rotation: place.rotation,
     },
     {
@@ -442,9 +444,9 @@ function mediaElements(
       variant: 'body',
       text: media.caption,
       color: '#243e43',
-      x: place.x + 25,
-      y: place.y + 275,
-      width: 390,
+      x: place.x + (circle ? 55 : 25),
+      y: place.y + (circle ? 300 : 275),
+      width: circle ? 290 : 390,
       height: 52,
       rotation: place.rotation,
     },
@@ -546,19 +548,25 @@ export function buildVisualPresentation(
   gallery: GalleryMedia[],
   title = 'Mon histoire visuelle',
   previous?: Presentation,
+  frameShape: NonNullable<Presentation['frameShape']> = previous?.frameShape ??
+    'rectangle',
 ): Presentation {
   const frames: Frame[] = []
   const elements: CanvasElement[] = []
   gallery.forEach((media, index) => {
-    const place = position(style, index, gallery.length)
+    const positioned = position(style, index, gallery.length)
+    const place =
+      frameShape === 'circle'
+        ? { ...positioned, x: positioned.x + 20, y: positioned.y - 30 }
+        : positioned
     const id = `visual-${index + 1}`
     frames.push({
       id,
       name: `${String(index + 1).padStart(2, '0')} · ${media.caption}`,
       x: place.x,
       y: place.y,
-      width: 440,
-      height: 340,
+      width: frameShape === 'circle' ? 400 : 440,
+      height: frameShape === 'circle' ? 400 : 340,
       rotation: place.rotation,
       cameraZoom:
         style === 'steps'
@@ -579,7 +587,7 @@ export function buildVisualPresentation(
           : circleStyleThemes[style].primary
         : palette[index % palette.length][1],
     })
-    elements.push(...mediaElements(id, media, place))
+    elements.push(...mediaElements(id, media, place, frameShape))
   })
   const next: Presentation = {
     version: 1,
@@ -588,6 +596,7 @@ export function buildVisualPresentation(
     frames,
     path: frames.map((frame) => frame.id),
     style,
+    frameShape,
   }
   if (!previous) return next
 
