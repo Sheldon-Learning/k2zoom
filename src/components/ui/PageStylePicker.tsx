@@ -12,11 +12,17 @@ const styles: { id: PageStyle; name: string; description: string }[] = [
 
 interface Props {
   selected: PageStyle
+  creating: boolean
   onSelect: (style: PageStyle) => void
   onClose: () => void
 }
 
-export function PageStylePicker({ selected, onSelect, onClose }: Props) {
+export function PageStylePicker({
+  selected,
+  creating,
+  onSelect,
+  onClose,
+}: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -34,10 +40,16 @@ export function PageStylePicker({ selected, onSelect, onClose }: Props) {
         >
           <X size={18} />
         </button>
-        <span className="page-style-eyebrow">PERSONNALISER LA PAGE</span>
-        <h2 id="page-style-title">Un espace à votre image.</h2>
+        <span className="page-style-eyebrow">SOUS-PRÉSENTATION</span>
+        <h2 id="page-style-title">
+          {creating
+            ? 'Choisissez votre style.'
+            : 'Un style pour tout le parcours.'}
+        </h2>
         <p>
-          Choisissez l’ambiance de cette sous-slide. Son contenu reste en place.
+          {creating
+            ? 'Le choix du style précède la création de votre sous-présentation.'
+            : 'Ce style s’applique à toutes les slides de cette sous-présentation.'}
         </p>
         <div className="page-style-options">
           {styles.map((style) => (

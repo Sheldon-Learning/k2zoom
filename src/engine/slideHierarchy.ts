@@ -54,6 +54,65 @@ export function presentationOrder(presentation: Presentation): Frame[] {
   return frames
 }
 
+export function normalizeNestedPresentations(
+  presentation: Presentation,
+): Presentation {
+  const frames = presentation.frames.map((frame) => ({ ...frame }))
+  const elements = presentation.elements.map((element) => ({ ...element }))
+  let changed = false
+  for (const parent of frames) {
+    const siblings = childrenOf({ ...presentation, frames }, parent.id)
+    if (!siblings.length) {
+      if (parent.subPresentationStyle) {
+        delete parent.subPresentationStyle
+        changed = true
+      }
+      continue
+    }
+    const style =
+      parent.subPresentationStyle ?? siblings[0].pageStyle ?? 'paper'
+    if (parent.subPresentationStyle !== style) {
+      parent.subPresentationStyle = style
+      changed = true
+    }
+    siblings.forEach((sibling, index) => {
+      const target = frames.find((frame) => frame.id === sibling.id)!
+      const x = index * 1120
+      const dx = x - target.x
+      const dy = -target.y
+      if (
+        dx ||
+        dy ||
+        target.width !== 960 ||
+        target.height !== 600 ||
+        target.rotation !== 0 ||
+        target.pageStyle !== style
+      ) {
+        target.x = x
+        target.y = 0
+        target.width = 960
+        target.height = 600
+        target.rotation = 0
+        target.pageStyle = style
+        changed = true
+        for (const element of elements) {
+          const owner =
+            'frameId' in element && element.frameId
+              ? element.frameId
+              : element.id.startsWith(`${target.id}-`)
+                ? target.id
+                : null
+          if (owner === target.id) {
+            element.x += dx
+            element.y += dy
+          }
+        }
+      }
+    })
+  }
+  return changed ? { ...presentation, frames, elements } : presentation
+}
+
 export function ancestorsOf(presentation: Presentation, id: string): Frame[] {
   const byId = new Map(presentation.frames.map((frame) => [frame.id, frame]))
   const result: Frame[] = []
@@ -71,16 +130,19 @@ export function ancestorsOf(presentation: Presentation, id: string): Frame[] {
 export function addNestedSlide(
   presentation: Presentation,
   parentId: string,
+  style: NonNullable<Frame['pageStyle']> = 'paper',
 ): Presentation {
   const parent = presentation.frames.find((frame) => frame.id === parentId)
   if (!parent) return presentation
+  const siblings = childrenOf(presentation, parentId)
+  const chosenStyle = parent.subPresentationStyle ?? style
   const frame: Frame = {
     id: `frame-${crypto.randomUUID()}`,
     name: 'Nouvelle sous-slide',
     parentId,
     children: [],
     hiddenFromMainPath: true,
-    x: 0,
+    x: siblings.length * 1120,
     y: 0,
     width: 960,
     height: 600,
@@ -88,7 +150,7 @@ export function addNestedSlide(
     cameraZoom: 1,
     duration: 650,
     accent: '#aab4d2',
-    pageStyle: 'paper',
+    pageStyle: chosenStyle,
   }
   return {
     ...presentation,
@@ -97,10 +159,8 @@ export function addNestedSlide(
         item.id === parentId
           ? {
               ...item,
-              children: [
-                ...childrenOf(presentation, parentId).map((child) => child.id),
-                frame.id,
-              ],
+              children: [...siblings.map((child) => child.id), frame.id],
+              subPresentationStyle: chosenStyle,
             }
           : item,
       ),
@@ -182,7 +242,7 @@ export function moveSlide(
     children.splice(index < 0 ? children.length : index, 0, id)
     frames[frames.indexOf(parent)] = { ...parent, children }
   }
-  return { ...presentation, frames, path }
+  return normalizeNestedPresentations({ ...presentation, frames, path })
 }
 
 export function deleteSlide(
@@ -196,7 +256,7 @@ export function deleteSlide(
     childrenOf(presentation, slideId).forEach((child) => visit(child.id))
   }
   visit(id)
-  return {
+  return normalizeNestedPresentations({
     ...presentation,
     frames: presentation.frames
       .filter((frame) => !removed.has(frame.id))
@@ -214,7 +274,7 @@ export function deleteSlide(
         ) &&
         ![...removed].some((slideId) => element.id.startsWith(`${slideId}-`)),
     ),
-  }
+  })
 }
 
 export function duplicateSlide(
@@ -280,5 +340,10 @@ export function duplicateSlide(
         : {}),
     } as typeof element)
   }
-  return { ...presentation, frames, path, elements }
+  return normalizeNestedPresentations({
+    ...presentation,
+    frames,
+    path,
+    elements,
+  })
 }

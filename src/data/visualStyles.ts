@@ -369,6 +369,7 @@ export function buildVisualPresentation(
     if (old && target) {
       target.children = old.children
       target.numberVisible = old.numberVisible
+      target.subPresentationStyle = old.subPresentationStyle
     }
   })
   const pending = [...nested]

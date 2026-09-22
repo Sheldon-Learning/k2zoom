@@ -2461,7 +2461,7 @@ input:focus-visible {
   }
 }
 
-/* Each nested slide is its own calm, full-size page. */
+/* A nested presentation has its own canvas and shared style. */
 .app.is-nested-page .nested-workspace {
   background: #f1f3f7;
 }
@@ -2522,7 +2522,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: min(680px, calc(100% - 36px));
+  width: min(840px, calc(100% - 36px));
   padding: 9px 10px;
   transform: translateX(-50%);
   border: 1px solid #ffffffbb;
@@ -2551,6 +2551,13 @@ input:focus-visible {
 }
 .nested-page-style-button {
   padding: 0 14px;
+}
+.nested-page-add-button {
+  color: #ffffff;
+  background: #24375f;
+}
+.nested-page-add-button:hover {
+  background: #344b7c;
 }
 .nested-page-back:hover,
 .nested-page-style-button:hover {
@@ -2729,11 +2736,15 @@ input:focus-visible {
   box-shadow: none !important;
 }
 @media (max-width: 600px) {
-  .nested-page-style-button {
+  .nested-page-add-button {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+  .nested-page-style-button:not(.nested-page-add-button) {
     padding: 0 10px;
     font-size: 0;
   }
-  .nested-page-style-button svg {
+  .nested-page-style-button:not(.nested-page-add-button) svg {
     flex: 0 0 auto;
   }
   .page-style-modal {

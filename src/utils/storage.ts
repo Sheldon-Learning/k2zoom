@@ -1,5 +1,6 @@
 import { demoPresentation } from '../data/demo'
 import type { Presentation } from '../types/presentation'
+import { normalizeNestedPresentations } from '../engine/slideHierarchy'
 
 const KEY = 'kzoom.presentation.v1'
 const LEGACY_KEY = 'zoomet.presentation.v1'
@@ -68,7 +69,11 @@ export function parsePresentation(json: string): Presentation {
         frame.duration >= 0 &&
         typeof frame.accent === 'string' &&
         (frame.pageStyle === undefined ||
-          ['paper', 'aurora', 'midnight', 'sand'].includes(frame.pageStyle)),
+          ['paper', 'aurora', 'midnight', 'sand'].includes(frame.pageStyle)) &&
+        (frame.subPresentationStyle === undefined ||
+          ['paper', 'aurora', 'midnight', 'sand'].includes(
+            frame.subPresentationStyle,
+          )),
       // Optional hierarchy fields keep older JSON presentations valid.
     )
   ) {
@@ -185,7 +190,7 @@ export function parsePresentation(json: string): Presentation {
       parent = byId.get(parent)?.parentId
     }
   }
-  return value as Presentation
+  return normalizeNestedPresentations(value as Presentation)
 }
 
 export function loadPresentation(): Presentation {

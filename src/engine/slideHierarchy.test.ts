@@ -98,4 +98,39 @@ describe('nested presentation slides', () => {
     expect(childrenOf(duplicate, siblings[1].id)).toHaveLength(1)
     expect(parsePresentation(JSON.stringify(duplicate))).toEqual(duplicate)
   })
+
+  it('separates older overlapping children while keeping their content attached', () => {
+    const parentId = demoPresentation.path[0]
+    const first = addNestedSlide(demoPresentation, parentId, 'aurora')
+    const second = addNestedSlide(first, parentId)
+    const siblings = childrenOf(second, parentId)
+    const legacy = {
+      ...second,
+      frames: second.frames.map((frame) =>
+        frame.id === parentId
+          ? { ...frame, subPresentationStyle: undefined }
+          : frame.id === siblings[1].id
+            ? { ...frame, x: 0, y: 0 }
+            : frame,
+      ),
+      elements: second.elements.map((element) =>
+        'frameId' in element && element.frameId === siblings[1].id
+          ? { ...element, x: element.x - 1120 }
+          : element,
+      ),
+    }
+    const restored = parsePresentation(JSON.stringify(legacy))
+    expect(childrenOf(restored, parentId).map((frame) => frame.x)).toEqual([
+      0, 1120,
+    ])
+    expect(
+      restored.frames.find((frame) => frame.id === parentId)
+        ?.subPresentationStyle,
+    ).toBe('aurora')
+    expect(
+      restored.elements.find(
+        (element) => element.id === `${siblings[1].id}-caption`,
+      )?.x,
+    ).toBe(1200)
+  })
 })

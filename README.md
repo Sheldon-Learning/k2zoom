@@ -23,7 +23,7 @@ The original startup demo remains available as the Classic style. Visual styles 
 
 Use **File → Importer PDF / PowerPoint** to turn a PDF or `.pptx` into a new presentation. Each source page or slide becomes a visual slide in the canvas. Import runs in the browser and replaces the current presentation; export JSON first if you need a backup. Embedded document text is part of the page image, while new Kzoom text blocks remain editable. Files up to 30 MB and 40 pages/slides are accepted when the converted presentation fits local browser storage. Legacy `.ppt` files need to be saved as `.pptx` first.
 
-Double-click a slide number to enter its nested pages, or create the first one from the number menu. Each nested page opens in its own workspace. Use **Style de la page** to choose Clair, Aurore, Minuit, or Sable; the chosen style and page content are saved with the presentation. The back button returns to the parent slide, and PDF export includes nested pages after their parent.
+Double-click a slide number to open its sub-presentation. Before creating the first slide, choose Clair, Aurore, Minuit, or Sable. The sub-presentation opens as a full workspace with its own slides, shared style, timeline, and add-slide button. The back button returns to the parent slide, and PDF export includes nested pages after their parent.
 
 ## Stack and decisions
 

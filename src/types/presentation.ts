@@ -24,6 +24,7 @@ export interface Frame {
   duration: number
   accent: string
   pageStyle?: 'paper' | 'aurora' | 'midnight' | 'sand'
+  subPresentationStyle?: 'paper' | 'aurora' | 'midnight' | 'sand'
 }
 
 interface BaseElement {

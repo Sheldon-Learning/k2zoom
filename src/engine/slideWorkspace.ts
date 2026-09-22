@@ -1,4 +1,5 @@
 import type { CanvasElement, Presentation } from '../types/presentation'
+import { childrenOf } from './slideHierarchy'
 
 function ownerId(element: CanvasElement, presentation: Presentation) {
   if ('frameId' in element && element.frameId) return element.frameId
@@ -17,6 +18,13 @@ export function workspacePresentation(
         (frame) => frame.id === nestedId && frame.parentId,
       )
     : undefined
+  const parent = nested
+    ? presentation.frames.find((frame) => frame.id === nested.parentId)
+    : undefined
+  const siblings = parent ? childrenOf(presentation, parent.id) : []
+  const siblingIds = new Set(siblings.map((frame) => frame.id))
+  const pageStyle =
+    parent?.subPresentationStyle ?? siblings[0]?.pageStyle ?? 'paper'
   const rootIds = new Set(
     presentation.frames
       .filter((frame) => !frame.parentId)
@@ -25,13 +33,15 @@ export function workspacePresentation(
   return {
     ...presentation,
     frames: nested
-      ? [nested]
+      ? siblings.map((frame) => ({ ...frame, pageStyle }))
       : presentation.frames.filter((frame) => !frame.parentId),
-    path: nested ? [nested.id] : presentation.path,
+    path: nested ? siblings.map((frame) => frame.id) : presentation.path,
     style: nested ? 'story' : presentation.style,
     elements: presentation.elements.filter((element) => {
       const owner = ownerId(element, presentation)
-      return nested ? owner === nested.id : !owner || rootIds.has(owner)
+      return nested
+        ? !!owner && siblingIds.has(owner)
+        : !owner || rootIds.has(owner)
     }),
   }
 }

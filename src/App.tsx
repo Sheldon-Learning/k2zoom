@@ -80,6 +80,9 @@ export default function App() {
   const [showMenu, setShowMenu] = useState(false)
   const [showStyles, setShowStyles] = useState(false)
   const [showPageStyles, setShowPageStyles] = useState(false)
+  const [styleTargetParentId, setStyleTargetParentId] = useState<string | null>(
+    null,
+  )
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
@@ -116,6 +119,12 @@ export default function App() {
   const currentFrame = activeNestedId
     ? presentation.frames.find((frame) => frame.id === activeNestedId)
     : pathFrames[activeFrame]
+  const subPresentationParent = currentFrame?.parentId
+    ? presentation.frames.find((frame) => frame.id === currentFrame.parentId)
+    : undefined
+  const styleTargetParent = presentation.frames.find(
+    (frame) => frame.id === styleTargetParentId,
+  )
   const visiblePresentation = workspacePresentation(
     presentation,
     activeNestedId,
@@ -720,7 +729,7 @@ export default function App() {
       setNumberMenuFrameId(null)
       exploreSlide(id)
     } else {
-      setNumberMenuFrameId(id)
+      openSubPresentationStyles(id)
     }
   }
 
@@ -733,8 +742,22 @@ export default function App() {
     if (currentFrame?.parentId) focusSlide(currentFrame.parentId)
   }
 
-  function addChild(id: string) {
-    const next = addNestedSlide(presentation, id)
+  function openSubPresentationStyles(parentId: string) {
+    setStyleTargetParentId(parentId)
+    setNumberMenuFrameId(null)
+    setShowPageStyles(true)
+  }
+
+  function requestAddChild(parentId: string) {
+    if (childrenOf(presentation, parentId).length) addChild(parentId)
+    else openSubPresentationStyles(parentId)
+  }
+
+  function addChild(
+    id: string,
+    style?: NonNullable<NonNullable<typeof currentFrame>['pageStyle']>,
+  ) {
+    const next = addNestedSlide(presentation, id, style)
     replace(next)
     const child = next.frames.at(-1)
     if (child) {
@@ -748,15 +771,31 @@ export default function App() {
       setSelectedImageId(null)
       setNavigationHistory((history) => [...history, id, child.id])
       controller.focusOn(child)
-      setShowPageStyles(true)
     }
   }
 
   function choosePageStyle(
     style: NonNullable<NonNullable<typeof currentFrame>['pageStyle']>,
   ) {
-    updateCurrentFrame({ pageStyle: style })
+    if (!styleTargetParent) return
+    const children = childrenOf(presentation, styleTargetParent.id)
+    if (children.length === 0) {
+      addChild(styleTargetParent.id, style)
+    } else {
+      const childIds = new Set(children.map((child) => child.id))
+      replace({
+        ...presentation,
+        frames: presentation.frames.map((frame) =>
+          frame.id === styleTargetParent.id
+            ? { ...frame, subPresentationStyle: style }
+            : childIds.has(frame.id)
+              ? { ...frame, pageStyle: style }
+              : frame,
+        ),
+      })
+    }
     setShowPageStyles(false)
+    setStyleTargetParentId(null)
   }
 
   function updateCurrentFrame(
@@ -1099,7 +1138,7 @@ export default function App() {
             type="button"
             title="Ajouter une slide imbriquée"
             aria-label={`Ajouter une sous-slide à ${frame.name}`}
-            onClick={() => addChild(frame.id)}
+            onClick={() => requestAddChild(frame.id)}
           >
             +
           </button>
@@ -1195,11 +1234,13 @@ export default function App() {
             <button
               className="button button-light styles-top-button"
               onClick={() =>
-                activeNestedId ? setShowPageStyles(true) : setShowStyles(true)
+                subPresentationParent
+                  ? openSubPresentationStyles(subPresentationParent.id)
+                  : setShowStyles(true)
               }
             >
               <LayoutTemplate size={16} />{' '}
-              {activeNestedId ? 'Style de la page' : 'Styles'}
+              {activeNestedId ? 'Style de présentation' : 'Styles'}
             </button>
             <button
               className="button button-light images-top-button"
@@ -1276,11 +1317,13 @@ export default function App() {
             <button
               className="sidebar-item sidebar-action"
               onClick={() =>
-                activeNestedId ? setShowPageStyles(true) : setShowStyles(true)
+                subPresentationParent
+                  ? openSubPresentationStyles(subPresentationParent.id)
+                  : setShowStyles(true)
               }
             >
               <LayoutTemplate size={18} />{' '}
-              {activeNestedId ? 'Style de la page' : 'Styles'}{' '}
+              {activeNestedId ? 'Style de présentation' : 'Styles'}{' '}
               <ArrowRight size={14} />
             </button>
             <button
@@ -1471,15 +1514,32 @@ export default function App() {
               <ArrowLeft size={18} />
             </button>
             <div className="nested-page-heading">
-              <span>SOUS-PRÉSENTATION / {numbers.get(currentFrame.id)}</span>
-              <strong>{currentFrame.name.split('·').at(-1)?.trim()}</strong>
+              <span>
+                SOUS-PRÉSENTATION /{' '}
+                {numbers.get(subPresentationParent?.id ?? '')}
+              </span>
+              <strong>
+                {subPresentationParent?.name.split('·').at(-1)?.trim()}
+              </strong>
             </div>
             <button
               type="button"
-              className="nested-page-style-button"
-              onClick={() => setShowPageStyles(true)}
+              className="nested-page-style-button nested-page-add-button"
+              onClick={() =>
+                subPresentationParent && addChild(subPresentationParent.id)
+              }
             >
-              <LayoutTemplate size={16} /> Style de la page
+              + Ajouter une slide
+            </button>
+            <button
+              type="button"
+              className="nested-page-style-button"
+              onClick={() =>
+                subPresentationParent &&
+                openSubPresentationStyles(subPresentationParent.id)
+              }
+            >
+              <LayoutTemplate size={16} /> Style de présentation
             </button>
           </div>
         )}
@@ -1487,7 +1547,10 @@ export default function App() {
           presentation={visiblePresentation}
           hierarchyPresentation={presentation}
           nestedPage={!!activeNestedId}
-          nestedPageStyle={currentFrame?.pageStyle}
+          nestedPageStyle={
+            subPresentationParent?.subPresentationStyle ??
+            currentFrame?.pageStyle
+          }
           controller={controller}
           viewportRef={viewportRef}
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
@@ -1526,7 +1589,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => {
-              addChild(numberMenuFrame.id)
+              requestAddChild(numberMenuFrame.id)
               setNumberMenuFrameId(null)
             }}
           >
@@ -1767,11 +1830,15 @@ export default function App() {
           onClose={() => setShowStyles(false)}
         />
       )}
-      {showPageStyles && !presenting && currentFrame?.parentId && (
+      {showPageStyles && !presenting && styleTargetParent && (
         <PageStylePicker
-          selected={currentFrame.pageStyle ?? 'paper'}
+          selected={styleTargetParent.subPresentationStyle ?? 'paper'}
+          creating={childrenOf(presentation, styleTargetParent.id).length === 0}
           onSelect={choosePageStyle}
-          onClose={() => setShowPageStyles(false)}
+          onClose={() => {
+            setShowPageStyles(false)
+            setStyleTargetParentId(null)
+          }}
         />
       )}
       {showVideoDialog && !presenting && (
