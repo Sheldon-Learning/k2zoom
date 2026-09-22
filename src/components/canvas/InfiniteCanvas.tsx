@@ -20,6 +20,7 @@ import {
   resizeImageByFactor,
 } from '../../engine/imageResize'
 import type {
+  CanvasElement,
   Camera,
   ImageElement,
   Presentation,
@@ -40,11 +41,14 @@ interface Props {
   viewportRef: React.RefObject<HTMLDivElement | null>
   selectedTextId?: string | null
   selectedImageId?: string | null
+  selectedElementId?: string | null
   onSelectText?: (element: TextElement) => void
   onUpdateText?: (id: string, changes: Partial<TextElement>) => void
   onDeleteText?: (id: string) => void
   onSelectImage?: (element: ImageElement) => void
   onUpdateImage?: (id: string, changes: Partial<ImageElement>) => void
+  onSelectElement?: (element: CanvasElement) => void
+  onClearSelection?: () => void
   onExploreSlide?: (id: string) => void
   onDoubleClickSlideNumber?: (id: string) => void
 }
@@ -58,11 +62,14 @@ export function InfiniteCanvas({
   viewportRef,
   selectedTextId,
   selectedImageId,
+  selectedElementId,
   onSelectText,
   onUpdateText,
   onDeleteText,
   onSelectImage,
   onUpdateImage,
+  onSelectElement,
+  onClearSelection,
   onExploreSlide,
   onDoubleClickSlideNumber,
 }: Props) {
@@ -204,6 +211,7 @@ export function InfiniteCanvas({
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || presenting) return
+    onClearSelection?.()
     drag.current = { x: event.clientX, y: event.clientY }
     event.currentTarget.setPointerCapture(event.pointerId)
     setGrabbing(true)
@@ -595,7 +603,7 @@ export function InfiniteCanvas({
         {presentation.elements.map((element) => (
           <div
             key={element.id}
-            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'}`}
+            className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'} ${selectedElementId === element.id && !presenting ? 'element-selected' : ''}`}
             role={
               element.type === 'image' ||
               (element.type === 'text' &&
@@ -625,14 +633,22 @@ export function InfiniteCanvas({
               element.type === 'image'
                 ? (event) => startImageDrag(event, element)
                 : element.type === 'video'
-                  ? (event) => event.stopPropagation()
+                  ? (event) => {
+                      event.stopPropagation()
+                      onSelectElement?.(element)
+                    }
                   : element.type === 'text' && !presenting && onSelectText
                     ? (event) => {
                         if (editingTextId !== element.id)
                           startTextDrag(event, element)
                         else event.stopPropagation()
                       }
-                    : undefined
+                    : element.type === 'shape' && !presenting
+                      ? (event) => {
+                          event.stopPropagation()
+                          onSelectElement?.(element)
+                        }
+                      : undefined
             }
             onClick={
               element.type === 'image'

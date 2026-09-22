@@ -13,6 +13,7 @@ import {
   Images,
   Play,
   Sparkles,
+  Trash2,
   Type,
   Upload,
   Video,
@@ -54,6 +55,7 @@ import { prepareImages } from './utils/images'
 import { createPresentationPdf } from './utils/pdfExport'
 import { importDocument } from './utils/documentImport'
 import type {
+  CanvasElement,
   Presentation,
   PresentationStyle,
   ImageElement,
@@ -86,8 +88,7 @@ export default function App() {
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
-  const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [activeNestedId, setActiveNestedId] = useState<string | null>(null)
@@ -146,6 +147,13 @@ export default function App() {
   const activeSiblingIndex = activeSiblings.findIndex(
     (frame) => frame.id === currentFrame?.id,
   )
+  const selectedElement = presentation.elements.find(
+    (element) => element.id === selectedElementId,
+  )
+  const selectedTextId =
+    selectedElement?.type === 'text' ? selectedElement.id : null
+  const selectedImageId =
+    selectedElement?.type === 'image' ? selectedElement.id : null
   const selectedText = presentation.elements.find(
     (element): element is TextElement =>
       element.type === 'text' && element.id === selectedTextId,
@@ -234,7 +242,37 @@ export default function App() {
       ...latest,
       elements: latest.elements.filter((element) => element.id !== id),
     })
-    setSelectedTextId(null)
+    setSelectedElementId(null)
+  }
+
+  function deleteSelectedElement() {
+    if (!selectedElementId) return
+    const latest = usePresentationStore.getState().presentation
+    if (!latest.elements.some((element) => element.id === selectedElementId)) {
+      setSelectedElementId(null)
+      return
+    }
+    replace({
+      ...latest,
+      elements: latest.elements.filter(
+        (element) => element.id !== selectedElementId,
+      ),
+    })
+    setSelectedElementId(null)
+    setShowTextEditor(false)
+    setMessage('Élément supprimé')
+    window.setTimeout(() => setMessage(''), 2500)
+  }
+
+  function selectCanvasElement(element: CanvasElement) {
+    setSelectedElementId(element.id)
+    if (element.type !== 'text') setShowTextEditor(false)
+    if ('frameId' in element && element.frameId) {
+      const owner = presentation.frames.find(
+        (frame) => frame.id === element.frameId,
+      )
+      if (owner?.parentId) setActiveNestedId(owner.id)
+    }
   }
 
   function addText(kind: 'body' | 'heading' = 'body') {
@@ -268,7 +306,7 @@ export default function App() {
       rotation: 0,
     }
     replace({ ...presentation, elements: [...presentation.elements, element] })
-    setSelectedTextId(element.id)
+    setSelectedElementId(element.id)
     setShowTextEditor(true)
   }
 
@@ -290,8 +328,8 @@ export default function App() {
             element.y <= frame.y + frame.height + 160),
     )
     if (frameIndex >= 0) setActiveFrame(frameIndex)
-    setSelectedTextId(element.id)
-    setSelectedImageId(null)
+    setSelectedElementId(element.id)
+    setSelectedElementId(null)
     setShowTextEditor(true)
   }
 
@@ -308,8 +346,8 @@ export default function App() {
   }
 
   function selectImage(image: ImageElement) {
-    setSelectedImageId(image.id)
-    setSelectedTextId(null)
+    setSelectedElementId(image.id)
+    setSelectedElementId(null)
   }
 
   async function pasteImages(files: File[]) {
@@ -354,8 +392,8 @@ export default function App() {
           'Stockage local plein : utilisez des images plus petites.',
         )
       replace(next)
-      setSelectedImageId(added.at(-1)?.id ?? null)
-      setSelectedTextId(null)
+      setSelectedElementId(added.at(-1)?.id ?? null)
+      setSelectedElementId(null)
       setMessage(
         `${added.length} image${added.length > 1 ? 's' : ''} collée${added.length > 1 ? 's' : ''}`,
       )
@@ -392,8 +430,8 @@ export default function App() {
       return
     }
     replace(next)
-    setSelectedImageId(copy.id)
-    setSelectedTextId(null)
+    setSelectedElementId(copy.id)
+    setSelectedElementId(null)
     setMessage('Image copiée sur le canvas')
     window.setTimeout(() => setMessage(''), 4500)
   }
@@ -436,8 +474,8 @@ export default function App() {
         ...latest,
         elements: latest.elements.filter((item) => item.id !== id),
       })
-      setSelectedImageId(null)
-      setSelectedTextId(null)
+      setSelectedElementId(null)
+      setSelectedElementId(null)
     }
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target
@@ -469,7 +507,7 @@ export default function App() {
               y: element.y + 24,
             }
             replace({ ...latest, elements: [...latest.elements, copy] })
-            setSelectedTextId(copy.id)
+            setSelectedElementId(copy.id)
           }
         } catch {
           setMessage('Impossible de coller cette image.')
@@ -572,8 +610,8 @@ export default function App() {
         if (JSON.stringify(next).length > 3_500_000)
           throw new Error('Stockage local plein : utilisez moins d’images.')
         replace(next)
-        setSelectedImageId(added.at(-1)?.id ?? null)
-        setSelectedTextId(null)
+        setSelectedElementId(added.at(-1)?.id ?? null)
+        setSelectedElementId(null)
         setMessage(
           `${added.length} image${added.length > 1 ? 's' : ''} ajoutée${added.length > 1 ? 's' : ''} à cette page`,
         )
@@ -695,8 +733,8 @@ export default function App() {
     setActiveFrame(index)
     setActiveNestedId(null)
     setNavigationHistory((history) => [...history, frame.id])
-    setSelectedTextId(null)
-    setSelectedImageId(null)
+    setSelectedElementId(null)
+    setSelectedElementId(null)
     controller.focusOn(frame, frame.duration)
   }
 
@@ -708,8 +746,8 @@ export default function App() {
     if (rootIndex >= 0) setActiveFrame(rootIndex)
     setActiveNestedId(frame.parentId ? id : null)
     setNavigationHistory((history) => [...history, id])
-    setSelectedTextId(null)
-    setSelectedImageId(null)
+    setSelectedElementId(null)
+    setSelectedElementId(null)
     setNumberMenuFrameId(null)
     controller.focusOn(frame, frame.duration)
   }
@@ -767,8 +805,8 @@ export default function App() {
       const index = pathFrames.findIndex((frame) => frame.id === root?.id)
       if (index >= 0) setActiveFrame(index)
       setActiveNestedId(child.id)
-      setSelectedTextId(null)
-      setSelectedImageId(null)
+      setSelectedElementId(null)
+      setSelectedElementId(null)
       setNavigationHistory((history) => [...history, id, child.id])
       controller.focusOn(child)
     }
@@ -858,8 +896,8 @@ export default function App() {
           setShowTextEditor(false)
           setShowMenu(false)
         } else {
-          setSelectedTextId(null)
-          setSelectedImageId(null)
+          setSelectedElementId(null)
+          setSelectedElementId(null)
           setCleanMode(false)
         }
         return
@@ -911,10 +949,10 @@ export default function App() {
           usePresentationStore.getState().redo()
           return
         }
-        if (mod && key === 'd' && (selectedImageId || selectedTextId)) {
+        if (mod && key === 'd' && selectedElementId) {
           event.preventDefault()
           const element = presentation.elements.find(
-            (item) => item.id === (selectedImageId ?? selectedTextId),
+            (item) => item.id === selectedElementId,
           )
           if (element) {
             const copy = {
@@ -927,34 +965,21 @@ export default function App() {
               ...presentation,
               elements: [...presentation.elements, copy],
             })
-            if (copy.type === 'image') setSelectedImageId(copy.id)
-            else setSelectedTextId(copy.id)
+            setSelectedElementId(copy.id)
           }
           return
         }
         if (
           (event.key === 'Delete' || event.key === 'Backspace') &&
-          (selectedTextId || selectedImageId)
+          selectedElementId
         ) {
           event.preventDefault()
-          if (selectedTextId) deleteTextById(selectedTextId)
-          else {
-            replace({
-              ...presentation,
-              elements: presentation.elements.filter(
-                (item) => item.id !== selectedImageId,
-              ),
-            })
-            setSelectedImageId(null)
-          }
+          deleteSelectedElement()
           return
         }
-        if (
-          event.key.startsWith('Arrow') &&
-          (selectedTextId || selectedImageId)
-        ) {
+        if (event.key.startsWith('Arrow') && selectedElementId) {
           event.preventDefault()
-          const id = selectedTextId ?? selectedImageId
+          const id = selectedElementId
           const amount = event.shiftKey ? 10 : 1
           replace({
             ...presentation,
@@ -1076,8 +1101,8 @@ export default function App() {
       replace(imported)
       setActiveFrame(0)
       setActiveNestedId(null)
-      setSelectedTextId(null)
-      setSelectedImageId(null)
+      setSelectedElementId(null)
+      setSelectedElementId(null)
       controller.focusOn(imported.frames[0], 0)
       setMessage(`${imported.frames.length} slides créées depuis ${file.name}`)
     } catch (error) {
@@ -1231,6 +1256,24 @@ export default function App() {
                   : 'Saved locally'}
             </span>
             <div className="topbar-spacer" />
+            <button
+              type="button"
+              className="button topbar-delete-button"
+              onClick={deleteSelectedElement}
+              disabled={!selectedElement}
+              aria-label={
+                selectedElement
+                  ? `Supprimer l’élément sélectionné (${selectedElement.type})`
+                  : 'Sélectionnez un élément à supprimer'
+              }
+              title={
+                selectedElement
+                  ? 'Supprimer l’élément sélectionné'
+                  : 'Cliquez sur un élément du canvas'
+              }
+            >
+              <Trash2 size={16} /> <span>Supprimer</span>
+            </button>
             <button
               className="button button-light styles-top-button"
               onClick={() =>
@@ -1555,11 +1598,14 @@ export default function App() {
           viewportRef={viewportRef}
           selectedTextId={showTextEditor && !cleanMode ? selectedTextId : null}
           selectedImageId={!cleanMode ? selectedImageId : null}
+          selectedElementId={!cleanMode ? selectedElementId : null}
           onSelectText={!cleanMode ? selectText : undefined}
           onUpdateText={!cleanMode ? updateTextById : undefined}
           onDeleteText={!cleanMode ? deleteTextById : undefined}
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
+          onSelectElement={!cleanMode ? selectCanvasElement : undefined}
+          onClearSelection={!cleanMode ? () => setSelectedElementId(null) : undefined}
           onExploreSlide={handleSlideNumberClick}
           onDoubleClickSlideNumber={handleSlideNumberDoubleClick}
         />
@@ -1692,7 +1738,7 @@ export default function App() {
           visualStyle={!!presentation.style && presentation.style !== 'story'}
           texts={frameTexts}
           selected={selectedText}
-          onSelect={setSelectedTextId}
+          onSelect={setSelectedElementId}
           onTitleChange={updateFrameTitle}
           onChange={updateText}
           onAdd={() => addText()}

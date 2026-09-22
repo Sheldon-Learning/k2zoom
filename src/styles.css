@@ -185,6 +185,20 @@ input:focus-visible {
 .button-primary:hover {
   background: #24575a;
 }
+.topbar-delete-button {
+  padding: 0 13px;
+  border-color: #efc8ce;
+  color: #b42f47;
+  background: #fff7f8;
+}
+.topbar-delete-button:hover:not(:disabled) {
+  border-color: #dc8190;
+  background: #ffe9ed;
+}
+.topbar-delete-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
 .menu-wrap {
   position: relative;
 }
@@ -638,6 +652,20 @@ input:focus-visible {
   display: flex;
   align-items: flex-start;
   pointer-events: none;
+}
+.canvas-element.element-selected {
+  z-index: 6;
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+.canvas-element.shape-circle,
+.canvas-element.shape-rect,
+.canvas-element.video-element {
+  pointer-events: auto;
+}
+.canvas-element.shape-circle,
+.canvas-element.shape-rect {
+  cursor: pointer;
 }
 .text-element {
   white-space: pre-wrap;

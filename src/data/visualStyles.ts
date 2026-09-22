@@ -311,6 +311,61 @@ export function appendMediaToStory(
   return { ...presentation, frames, elements, path, style: 'story' }
 }
 
+/** Reflows the existing root slides without recreating their editable content. */
+export function restylePresentation(
+  presentation: Presentation,
+  style: PresentationStyle,
+): Presentation {
+  if (style === 'story') return { ...presentation, style }
+  const rootFrames = presentation.path
+    .map((id) => presentation.frames.find((frame) => frame.id === id))
+    .filter((frame): frame is Frame => !!frame && !frame.parentId)
+  const moves = new Map(
+    rootFrames.map((frame, index) => {
+      const target = position(style, index, rootFrames.length)
+      return [
+        frame.id,
+        {
+          dx: target.x - frame.x,
+          dy: target.y - frame.y,
+          rotation: target.rotation,
+          rotationDelta: target.rotation - frame.rotation,
+        },
+      ]
+    }),
+  )
+  const ownerOf = (element: CanvasElement) => {
+    if ('frameId' in element && element.frameId) return element.frameId
+    return rootFrames.find((frame) => element.id.startsWith(`${frame.id}-`))?.id
+  }
+  return {
+    ...presentation,
+    style,
+    frames: presentation.frames.map((frame) => {
+      const move = moves.get(frame.id)
+      return move
+        ? {
+            ...frame,
+            x: frame.x + move.dx,
+            y: frame.y + move.dy,
+            rotation: move.rotation,
+          }
+        : frame
+    }),
+    elements: presentation.elements.map((element) => {
+      const move = moves.get(ownerOf(element) ?? '')
+      return move
+        ? {
+            ...element,
+            x: element.x + move.dx,
+            y: element.y + move.dy,
+            rotation: element.rotation + move.rotationDelta,
+          }
+        : element
+    }),
+  }
+}
+
 export function buildVisualPresentation(
   style: Exclude<PresentationStyle, 'story'>,
   gallery: GalleryMedia[],
