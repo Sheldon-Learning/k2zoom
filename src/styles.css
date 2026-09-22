@@ -1687,6 +1687,73 @@ input:focus-visible {
   max-width: none;
   height: 100%;
 }
+.style-art-circle {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  background: #f5f5f7;
+}
+.style-art-circle svg {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+.canvas-viewport:is(
+    .style-orbit,
+    .style-orbit-eclipse,
+    .style-orbit-amber,
+    .style-orbit-azure,
+    .style-orbit-pearl,
+    .style-orbit-duo,
+    .style-orbit-concentric,
+    .style-orbit-plasma,
+    .style-orbit-mint,
+    .style-orbit-scarlet
+  )
+  .canvas-frame {
+  border: 1px solid #ffffffcc;
+  border-radius: 24px;
+  background: #ffffffed;
+  box-shadow:
+    0 28px 70px #1018281c,
+    0 2px 10px #10182812,
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(24px) saturate(135%);
+}
+.canvas-viewport:is(
+    .style-orbit-eclipse,
+    .style-orbit-duo,
+    .style-orbit-plasma,
+    .style-orbit-mint,
+    .style-orbit-scarlet
+  )
+  .canvas-grid {
+  background:
+    radial-gradient(circle at 50% 50%, #111827 0, #05070b 48%, #010203 100%),
+    none;
+}
+.canvas-viewport.style-orbit-amber .canvas-grid {
+  background: radial-gradient(circle at 50% 50%, #3a2d1d 0, #15110c 72%);
+}
+.canvas-viewport.style-orbit-azure .canvas-grid {
+  background: radial-gradient(circle at 50% 48%, #ffffff 0, #edf7ff 70%);
+}
+.canvas-viewport.style-orbit-pearl .canvas-grid,
+.canvas-viewport.style-orbit-concentric .canvas-grid {
+  background: radial-gradient(circle at 50% 45%, #fffdf8 0, #e8e3dc 72%);
+}
+.canvas-viewport.style-orbit-duo .canvas-grid {
+  background:
+    radial-gradient(circle at 29% 54%, #49134780 0, transparent 34%),
+    radial-gradient(circle at 72% 45%, #063e5e8c 0, transparent 35%), #05060a;
+}
+.canvas-viewport.style-orbit-mint .canvas-grid {
+  background: radial-gradient(circle at 50% 50%, #073324 0, #020a07 72%);
+}
+.canvas-viewport.style-orbit-scarlet .canvas-grid {
+  background: radial-gradient(circle at 50% 50%, #3a090b 0, #0b0203 72%);
+}
 .style-art-timeline {
   background: #e6f4ee;
   color: #519579;

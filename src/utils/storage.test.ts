@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { demoPresentation } from '../data/demo'
-import { buildVisualPresentation, demoGallery } from '../data/visualStyles'
+import {
+  buildVisualPresentation,
+  circleStyleIds,
+  demoGallery,
+} from '../data/visualStyles'
 import { loadPresentation, parsePresentation } from './storage'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -35,8 +39,8 @@ describe('presentation JSON', () => {
       ),
     ).toThrow()
   })
-  it('accepts a visual gallery with embedded image data', () => {
-    const gallery = buildVisualPresentation('orbit', demoGallery)
+  it.each(circleStyleIds)('round trips the %s circle style', (style) => {
+    const gallery = buildVisualPresentation(style, demoGallery)
     expect(parsePresentation(JSON.stringify(gallery))).toEqual(gallery)
   })
   it.each([

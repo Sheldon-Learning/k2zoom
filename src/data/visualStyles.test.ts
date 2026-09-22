@@ -39,6 +39,26 @@ describe('visual presentation layouts', () => {
   )
 
   it.each([
+    'orbit-eclipse',
+    'orbit-amber',
+    'orbit-azure',
+    'orbit-pearl',
+    'orbit-duo',
+    'orbit-concentric',
+    'orbit-plasma',
+    'orbit-mint',
+    'orbit-scarlet',
+  ] as const)('builds eight editable slides for circle style %s', (style) => {
+    const presentation = buildVisualPresentation(style, demoGallery)
+    expect(presentation.frames).toHaveLength(8)
+    expect(presentation.elements).toHaveLength(16)
+    expect(presentation.style).toBe(style)
+    expect(
+      new Set(presentation.frames.map((frame) => `${frame.x},${frame.y}`)).size,
+    ).toBe(8)
+  })
+
+  it.each([
     'chevrons',
     'medallions',
     'steps',

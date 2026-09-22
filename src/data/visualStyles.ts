@@ -26,6 +26,120 @@ export interface GalleryVideo {
 
 export type GalleryMedia = GalleryImage | GalleryVideo
 
+export const circleStyleIds = [
+  'orbit',
+  'orbit-eclipse',
+  'orbit-amber',
+  'orbit-azure',
+  'orbit-pearl',
+  'orbit-duo',
+  'orbit-concentric',
+  'orbit-plasma',
+  'orbit-mint',
+  'orbit-scarlet',
+] as const
+
+export type CirclePresentationStyle = (typeof circleStyleIds)[number]
+
+export const circleStyleThemes: Record<
+  CirclePresentationStyle,
+  {
+    primary: string
+    secondary: string
+    surface: string
+    glow: string
+    radius: number
+    yScale: number
+  }
+> = {
+  orbit: {
+    primary: '#72a8c6',
+    secondary: '#9fc9dc',
+    surface: '#eef6f8',
+    glow: '#72a8c6',
+    radius: 1,
+    yScale: 1,
+  },
+  'orbit-eclipse': {
+    primary: '#008cff',
+    secondary: '#83d7ff',
+    surface: '#03070c',
+    glow: '#008cff',
+    radius: 1.02,
+    yScale: 1,
+  },
+  'orbit-amber': {
+    primary: '#ffb547',
+    secondary: '#fff0bf',
+    surface: '#17130f',
+    glow: '#ffb547',
+    radius: 1.08,
+    yScale: 0.96,
+  },
+  'orbit-azure': {
+    primary: '#00bfff',
+    secondary: '#9aeaff',
+    surface: '#f7fbff',
+    glow: '#18bfff',
+    radius: 0.94,
+    yScale: 1,
+  },
+  'orbit-pearl': {
+    primary: '#f2d79c',
+    secondary: '#fffdf5',
+    surface: '#ece8e2',
+    glow: '#fff2c7',
+    radius: 1,
+    yScale: 1,
+  },
+  'orbit-duo': {
+    primary: '#ff26d4',
+    secondary: '#13c8ff',
+    surface: '#080a10',
+    glow: '#7b5cff',
+    radius: 1.05,
+    yScale: 1,
+  },
+  'orbit-concentric': {
+    primary: '#ffe9ad',
+    secondary: '#fffdf4',
+    surface: '#242321',
+    glow: '#ffe8a8',
+    radius: 1.12,
+    yScale: 1,
+  },
+  'orbit-plasma': {
+    primary: '#8c5bff',
+    secondary: '#ff32d0',
+    surface: '#04030a',
+    glow: '#9f49ff',
+    radius: 0.92,
+    yScale: 0.94,
+  },
+  'orbit-mint': {
+    primary: '#20ef9b',
+    secondary: '#a2ffd8',
+    surface: '#03140e',
+    glow: '#1eff9e',
+    radius: 1,
+    yScale: 1,
+  },
+  'orbit-scarlet': {
+    primary: '#ff3131',
+    secondary: '#ffaaa0',
+    surface: '#160304',
+    glow: '#ff2d2d',
+    radius: 0.96,
+    yScale: 1,
+  },
+}
+
+export function isCircleStyle(
+  style: PresentationStyle,
+): style is CirclePresentationStyle {
+  return (circleStyleIds as readonly PresentationStyle[]).includes(style)
+}
+
 export const visualStyles: {
   id: Exclude<PresentationStyle, 'story'>
   name: string
@@ -38,8 +152,53 @@ export const visualStyles: {
   },
   {
     id: 'orbit',
-    name: 'Cercle',
-    description: 'Une histoire qui tourne autour d’une idée.',
+    name: 'Cercle classique',
+    description: 'Un anneau calme et éditorial.',
+  },
+  {
+    id: 'orbit-eclipse',
+    name: 'Éclipse bleue',
+    description: 'Noir profond et halo bleu électrique.',
+  },
+  {
+    id: 'orbit-amber',
+    name: 'Halo ambre',
+    description: 'Une lumière chaude, précise et accueillante.',
+  },
+  {
+    id: 'orbit-azure',
+    name: 'Halo azur',
+    description: 'Un cercle cyan aérien sur verre clair.',
+  },
+  {
+    id: 'orbit-pearl',
+    name: 'Halo perle',
+    description: 'Une lumière diffuse aux tons ivoire.',
+  },
+  {
+    id: 'orbit-duo',
+    name: 'Duo chromatique',
+    description: 'Magenta et cyan se rencontrent en douceur.',
+  },
+  {
+    id: 'orbit-concentric',
+    name: 'Concentrique',
+    description: 'Deux orbites lumineuses hiérarchisent le récit.',
+  },
+  {
+    id: 'orbit-plasma',
+    name: 'Plasma',
+    description: 'Un anneau violet vibrant et cinématique.',
+  },
+  {
+    id: 'orbit-mint',
+    name: 'Halo menthe',
+    description: 'Vert lumineux, net et contemporain.',
+  },
+  {
+    id: 'orbit-scarlet',
+    name: 'Halo écarlate',
+    description: 'Rouge intense sur une scène minimaliste.',
   },
   {
     id: 'grid',
@@ -180,12 +339,28 @@ function position(
         y: index % 2 ? 60 : -60,
         rotation: index % 2 ? 2 : -2,
       }
-    case 'orbit': {
+    case 'orbit':
+    case 'orbit-eclipse':
+    case 'orbit-amber':
+    case 'orbit-azure':
+    case 'orbit-pearl':
+    case 'orbit-duo':
+    case 'orbit-concentric':
+    case 'orbit-plasma':
+    case 'orbit-mint':
+    case 'orbit-scarlet': {
+      const theme = circleStyleThemes[style]
       const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count
-      const radius = Math.max(600, count * 100)
+      const baseRadius = Math.max(600, count * 100) * theme.radius
+      const radius =
+        style === 'orbit-concentric'
+          ? baseRadius * (index % 2 ? 0.62 : 1)
+          : style === 'orbit-plasma'
+            ? baseRadius * (0.92 + (index % 3) * 0.055)
+            : baseRadius
       return {
         x: Math.cos(angle) * radius - 220,
-        y: Math.sin(angle) * radius - 170,
+        y: Math.sin(angle) * radius * theme.yScale - 170,
         rotation: 0,
       }
     }
@@ -398,7 +573,11 @@ export function buildVisualPresentation(
             ? 0.55
             : 1,
       duration: 850,
-      accent: palette[index % palette.length][1],
+      accent: isCircleStyle(style)
+        ? index % 2
+          ? circleStyleThemes[style].secondary
+          : circleStyleThemes[style].primary
+        : palette[index % palette.length][1],
     })
     elements.push(...mediaElements(id, media, place))
   })

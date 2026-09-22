@@ -1,5 +1,10 @@
 import { ArrowRight, Images, X } from 'lucide-react'
-import { visualStyles } from '../../data/visualStyles'
+import {
+  circleStyleThemes,
+  isCircleStyle,
+  visualStyles,
+  type CirclePresentationStyle,
+} from '../../data/visualStyles'
 import type { PresentationStyle } from '../../types/presentation'
 
 interface Props {
@@ -142,7 +147,105 @@ function SpatialStyleArt({ style }: { style: SpatialStyle }) {
   )
 }
 
+function CircleStyleArt({ style }: { style: CirclePresentationStyle }) {
+  const theme = circleStyleThemes[style]
+  const gradientId = `circle-gradient-${style}`
+  const glowId = `circle-glow-${style}`
+  const points = Array.from({ length: 7 }, (_, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / 7
+    const radius = style === 'orbit-concentric' ? (index % 2 ? 25 : 39) : 39
+    return {
+      x: 120 + Math.cos(angle) * radius,
+      y: 52 + Math.sin(angle) * radius,
+    }
+  })
+  return (
+    <span className={`style-art style-art-circle style-art-${style}`}>
+      <svg viewBox="0 0 240 104" aria-hidden="true">
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="1">
+            <stop stopColor={theme.primary} />
+            <stop offset="1" stopColor={theme.secondary} />
+          </linearGradient>
+          <filter id={glowId} x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <rect width="240" height="104" rx="14" fill={theme.surface} />
+        <circle
+          cx="120"
+          cy="52"
+          r="39"
+          fill="none"
+          stroke={theme.glow}
+          strokeWidth="8"
+          opacity=".16"
+        />
+        <circle
+          cx="120"
+          cy="52"
+          r="39"
+          fill="none"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="2.4"
+          filter={`url(#${glowId})`}
+        />
+        {style === 'orbit-concentric' && (
+          <circle
+            cx="120"
+            cy="52"
+            r="25"
+            fill="none"
+            stroke={theme.secondary}
+            strokeWidth="2"
+            opacity=".9"
+          />
+        )}
+        {points.map(({ x, y }, index) => (
+          <g key={index} transform={`translate(${x} ${y})`}>
+            <rect
+              x="-11"
+              y="-8"
+              width="22"
+              height="16"
+              rx="4"
+              fill="#ffffffef"
+              stroke={index % 2 ? theme.secondary : theme.primary}
+              strokeWidth="1"
+            />
+            <rect
+              x="-7"
+              y="-4"
+              width="14"
+              height="5"
+              rx="2"
+              fill={index % 2 ? theme.secondary : theme.primary}
+              opacity=".82"
+            />
+            <rect
+              x="-7"
+              y="3"
+              width="9"
+              height="1.5"
+              rx="1"
+              fill="#8b93a1"
+              opacity=".6"
+            />
+          </g>
+        ))}
+        <circle cx="120" cy="52" r="12" fill="#ffffff10" stroke="#ffffff35" />
+        <circle cx="120" cy="52" r="2.5" fill={theme.secondary} />
+      </svg>
+    </span>
+  )
+}
+
 function StyleArt({ style }: { style: PresentationStyle }) {
+  if (isCircleStyle(style)) return <CircleStyleArt style={style} />
   if (style in spatialPreviews)
     return <SpatialStyleArt style={style as SpatialStyle} />
   return (
@@ -288,6 +391,8 @@ function StyleArt({ style }: { style: PresentationStyle }) {
 }
 
 export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
+  const stylesById = (ids: PresentationStyle[]) =>
+    visualStyles.filter((style) => ids.includes(style.id))
   const groups: {
     title: string
     styles: { id: PresentationStyle; name: string; description: string }[]
@@ -300,10 +405,24 @@ export function StylePicker({ selected, onSelect, onUpload, onClose }: Props) {
           name: 'Classique',
           description: 'Retrouver la démonstration originale.',
         },
-        ...visualStyles.slice(0, 5),
+        ...stylesById(['timeline', 'grid', 'spiral', 'zigzag']),
       ],
     },
-    { title: 'Frises & infographies', styles: visualStyles.slice(5) },
+    {
+      title: 'Cercle',
+      styles: visualStyles.filter((style) => isCircleStyle(style.id)),
+    },
+    {
+      title: 'Frises & infographies',
+      styles: stylesById([
+        'chevrons',
+        'medallions',
+        'steps',
+        'ribbons',
+        'milestones',
+        'spectrum',
+      ]),
+    },
   ]
   return (
     <div className="modal-backdrop" onClick={onClose}>

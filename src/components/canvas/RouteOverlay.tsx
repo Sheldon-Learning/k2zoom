@@ -1,4 +1,5 @@
 import type { Frame, PresentationStyle } from '../../types/presentation'
+import { circleStyleThemes, isCircleStyle } from '../../data/visualStyles'
 
 interface Props {
   frames: Frame[]
@@ -29,8 +30,17 @@ export function RouteOverlay({ frames, style }: Props) {
   const bottom = Math.max(...points.map((point) => point.y)) + 160
   const local = points.map((point) => `${point.x - left},${point.y - top}`)
   const path = `M ${local.join(' L ')}`
-  const orbitRadius =
-    style === 'orbit' ? Math.hypot(points[0].x, points[0].y) : 0
+  const circleTheme = isCircleStyle(style) ? circleStyleThemes[style] : null
+  const orbitRadiusX = Math.max(...points.map((point) => Math.abs(point.x)))
+  const orbitRadiusY = Math.max(...points.map((point) => Math.abs(point.y)))
+  const innerRadiusX = Math.min(
+    ...points.map((point) => Math.abs(point.x) || orbitRadiusX),
+  )
+  const innerRadiusY = Math.min(
+    ...points.map((point) => Math.abs(point.y) || orbitRadiusY),
+  )
+  const gradientId = `route-gradient-${style}`
+  const glowId = `route-glow-${style}`
   return (
     <svg
       className={`route-overlay route-${style}`}
@@ -56,12 +66,65 @@ export function RouteOverlay({ frames, style }: Props) {
             strokeLinejoin="round"
           />
         </marker>
+        {circleTheme && (
+          <>
+            <linearGradient id={gradientId} x1="0" x2="1">
+              <stop stopColor={circleTheme.primary} />
+              <stop offset="1" stopColor={circleTheme.secondary} />
+            </linearGradient>
+            <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="18" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </>
+        )}
       </defs>
-      {style === 'orbit' ? (
+      {circleTheme ? (
+        <>
+          <ellipse
+            cx={-left}
+            cy={-top}
+            rx={orbitRadiusX}
+            ry={orbitRadiusY}
+            fill={circleTheme.surface}
+            fillOpacity=".1"
+            stroke={circleTheme.glow}
+            strokeWidth="38"
+            strokeOpacity=".1"
+            filter={`url(#${glowId})`}
+          />
+          <ellipse
+            cx={-left}
+            cy={-top}
+            rx={orbitRadiusX}
+            ry={orbitRadiusY}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth="9"
+            filter={`url(#${glowId})`}
+          />
+          {style === 'orbit-concentric' && (
+            <ellipse
+              cx={-left}
+              cy={-top}
+              rx={Math.max(innerRadiusX, orbitRadiusX * 0.58)}
+              ry={Math.max(innerRadiusY, orbitRadiusY * 0.58)}
+              fill="none"
+              stroke={circleTheme.secondary}
+              strokeWidth="7"
+              strokeOpacity=".9"
+              filter={`url(#${glowId})`}
+            />
+          )}
+        </>
+      ) : style === 'orbit' ? (
         <circle
           cx={-left}
           cy={-top}
-          r={orbitRadius}
+          r={orbitRadiusX}
           fill="none"
           stroke="#8aadc4"
           strokeWidth="6"
