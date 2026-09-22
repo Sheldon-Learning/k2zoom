@@ -89,6 +89,10 @@ export default function App() {
     null,
   )
   const [showVideoDialog, setShowVideoDialog] = useState(false)
+  const [showPresentationOptions, setShowPresentationOptions] = useState(false)
+  const [presentationTransition, setPresentationTransition] = useState<
+    'overview' | 'direct'
+  >('overview')
   const [cleanMode, setCleanMode] = useState(false)
   const [showTextEditor, setShowTextEditor] = useState(false)
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
@@ -813,7 +817,9 @@ export default function App() {
 
   function focus(
     index: number,
-    viaOverview = useEditorStore.getState().presenting || cleanMode,
+    viaOverview = cleanMode ||
+      (useEditorStore.getState().presenting &&
+        presentationTransition === 'overview'),
   ) {
     const frame = pathFrames[index]
     if (!frame) return
@@ -829,7 +835,9 @@ export default function App() {
 
   function focusSlide(
     id: string,
-    viaOverview = useEditorStore.getState().presenting || cleanMode,
+    viaOverview = cleanMode ||
+      (useEditorStore.getState().presenting &&
+        presentationTransition === 'overview'),
   ) {
     const frame = presentation.frames.find((item) => item.id === id)
     if (!frame) return
@@ -870,7 +878,9 @@ export default function App() {
 
   function navigateSibling(
     delta: number,
-    viaOverview = useEditorStore.getState().presenting || cleanMode,
+    viaOverview = cleanMode ||
+      (useEditorStore.getState().presenting &&
+        presentationTransition === 'overview'),
   ) {
     const next = activeSiblings[activeSiblingIndex + delta]
     if (next) focusSlide(next.id, viaOverview)
@@ -948,9 +958,13 @@ export default function App() {
     })
   }
 
-  async function startPresentation() {
+  async function startPresentation(
+    transition: 'overview' | 'direct' = presentationTransition,
+  ) {
     if (!pathFrames.length) return
     const startingNestedId = activeNestedId
+    setPresentationTransition(transition)
+    setShowPresentationOptions(false)
     setNumberMenuFrameId(null)
     setPresenting(true)
     setShowMenu(false)
@@ -986,6 +1000,7 @@ export default function App() {
           showStyles ||
           showPageStyles ||
           showVideoDialog ||
+          showPresentationOptions ||
           showTextEditor ||
           showMenu
         ) {
@@ -993,6 +1008,7 @@ export default function App() {
           setShowStyles(false)
           setShowPageStyles(false)
           setShowVideoDialog(false)
+          setShowPresentationOptions(false)
           setShowTextEditor(false)
           setShowMenu(false)
         } else {
@@ -1008,6 +1024,7 @@ export default function App() {
         showStyles ||
         showPageStyles ||
         showVideoDialog ||
+        showPresentationOptions ||
         showMenu
       )
         return
@@ -1026,10 +1043,10 @@ export default function App() {
           navigateSibling(-1)
         } else if (event.key === 'Home') {
           event.preventDefault()
-          focus(0, true)
+          focus(0)
         } else if (event.key === 'End') {
           event.preventDefault()
-          focus(pathFrames.length - 1, true)
+          focus(pathFrames.length - 1)
         }
       } else {
         if (mod && key === 's') {
@@ -1109,7 +1126,7 @@ export default function App() {
           return
         }
         if (mod || event.altKey) return
-        if (key === 'p') void startPresentation()
+        if (key === 'p') setShowPresentationOptions(true)
         else if (key === '0') controller.fitToScreen(visiblePresentation.frames)
         else if (event.key === '+' || event.key === '=')
           controller.zoomTo(useEditorStore.getState().camera.zoom * 1.25)
@@ -1453,7 +1470,7 @@ export default function App() {
             </div>
             <button
               className="button button-primary present-top-button"
-              onClick={() => void startPresentation()}
+              onClick={() => setShowPresentationOptions(true)}
             >
               <Play size={15} fill="currentColor" /> Present
             </button>
@@ -2011,6 +2028,71 @@ export default function App() {
                 <span>Exit presentation</span>
                 <kbd>Esc</kbd>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPresentationOptions && !presenting && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowPresentationOptions(false)}
+        >
+          <div
+            className="presentation-options-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="presentation-options-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              aria-label="Fermer"
+              onClick={() => setShowPresentationOptions(false)}
+            >
+              <X size={18} />
+            </button>
+            <span className="presentation-options-eyebrow">
+              MODE DE PRÉSENTATION
+            </span>
+            <h2 id="presentation-options-title">
+              Choisissez votre transition.
+            </h2>
+            <p>Ce choix s’appliquera à toutes les slides et sous-slides.</p>
+            <div className="presentation-option-grid">
+              <button
+                type="button"
+                className={
+                  presentationTransition === 'overview' ? 'active' : ''
+                }
+                onClick={() => void startPresentation('overview')}
+              >
+                <span className="presentation-option-visual overview-visual">
+                  <i />
+                  <i />
+                  <i />
+                  <Scan size={25} />
+                </span>
+                <strong>Avec vue d’ensemble</strong>
+                <small>
+                  Recul rapide sur tout le parcours avant chaque slide.
+                </small>
+              </button>
+              <button
+                type="button"
+                className={presentationTransition === 'direct' ? 'active' : ''}
+                onClick={() => void startPresentation('direct')}
+              >
+                <span className="presentation-option-visual direct-visual">
+                  <i />
+                  <ArrowRight size={28} />
+                  <i />
+                </span>
+                <strong>Transition directe</strong>
+                <small>
+                  Passe directement à la slide suivante, sans recul.
+                </small>
+              </button>
             </div>
           </div>
         </div>
