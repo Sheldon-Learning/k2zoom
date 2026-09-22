@@ -43,6 +43,7 @@ interface Props {
   onSelectImage?: (element: ImageElement) => void
   onUpdateImage?: (id: string, changes: Partial<ImageElement>) => void
   onExploreSlide?: (id: string) => void
+  onDoubleClickSlideNumber?: (id: string) => void
 }
 
 export function InfiniteCanvas({
@@ -57,6 +58,7 @@ export function InfiniteCanvas({
   onSelectImage,
   onUpdateImage,
   onExploreSlide,
+  onDoubleClickSlideNumber,
 }: Props) {
   const numbers = slideNumbers(presentation)
   const camera = useEditorStore((state) => state.camera)
@@ -138,6 +140,20 @@ export function InfiniteCanvas({
   const suppressImageClick = useRef<string | null>(null)
   const [grabbing, setGrabbing] = useState(false)
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
+  const [editingTextId, setEditingTextId] = useState<string | null>(null)
+  const [textDraft, setTextDraft] = useState('')
+  const inlineEditorRef = useRef<HTMLTextAreaElement | null>(null)
+
+  function editText(text: TextElement) {
+    if (presenting || !onUpdateText) return
+    onSelectText?.(text)
+    setEditingTextId(text.id)
+    setTextDraft(text.text)
+    requestAnimationFrame(() => {
+      inlineEditorRef.current?.focus()
+      inlineEditorRef.current?.select()
+    })
+  }
 
   useEffect(
     () => () => {
@@ -544,9 +560,16 @@ export function InfiniteCanvas({
                     ? undefined
                     : () => onExploreSlide?.(frame.id)
                 }
+                onDoubleClick={
+                  !presenting
+                    ? () => onDoubleClickSlideNumber?.(frame.id)
+                    : undefined
+                }
                 actionLabel={
                   !presenting
-                    ? `Gérer les sous-slides de ${frame.name}`
+                    ? childrenOf(presentation, frame.id).length
+                      ? `Double-cliquer pour explorer les sous-slides de ${frame.name}`
+                      : `Double-cliquer pour créer une sous-présentation de ${frame.name}`
                     : undefined
                 }
                 showAddIndicator={!presenting}
@@ -566,13 +589,19 @@ export function InfiniteCanvas({
             className={`canvas-element ${element.type === 'text' ? `text-${element.variant} text-element text-effect-${element.effect ?? 'plain'} ${element.customColor ? 'text-custom-color' : ''} ${textOnFrameIds.has(element.id) ? 'text-on-frame' : ''} ${selectedTextId === element.id && !presenting ? 'text-selected' : ''}` : element.type === 'shape' ? `shape-${element.shape}` : element.type === 'image' ? `image-element ${selectedImageId === element.id && !presenting ? 'image-selected' : ''}` : 'video-element'}`}
             role={
               element.type === 'image' ||
-              (element.type === 'text' && !presenting && onSelectText)
+              (element.type === 'text' &&
+                !presenting &&
+                onSelectText &&
+                editingTextId !== element.id)
                 ? 'button'
                 : undefined
             }
             tabIndex={
               element.type === 'image' ||
-              (element.type === 'text' && !presenting && onSelectText)
+              (element.type === 'text' &&
+                !presenting &&
+                onSelectText &&
+                editingTextId !== element.id)
                 ? 0
                 : undefined
             }
@@ -589,7 +618,11 @@ export function InfiniteCanvas({
                 : element.type === 'video'
                   ? (event) => event.stopPropagation()
                   : element.type === 'text' && !presenting && onSelectText
-                    ? (event) => startTextDrag(event, element)
+                    ? (event) => {
+                        if (editingTextId !== element.id)
+                          startTextDrag(event, element)
+                        else event.stopPropagation()
+                      }
                     : undefined
             }
             onClick={
@@ -625,7 +658,12 @@ export function InfiniteCanvas({
                     event.stopPropagation()
                     restoreImageView()
                   }
-                : undefined
+                : element.type === 'text' && !presenting
+                  ? (event) => {
+                      event.stopPropagation()
+                      editText(element)
+                    }
+                  : undefined
             }
             onKeyDown={
               element.type === 'image'
@@ -646,7 +684,8 @@ export function InfiniteCanvas({
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault()
                         event.stopPropagation()
-                        onSelectText(element)
+                        if (event.key === 'Enter') editText(element)
+                        else onSelectText(element)
                       }
                     }
                   : undefined
@@ -672,7 +711,36 @@ export function InfiniteCanvas({
           >
             {element.type === 'text' ? (
               <>
-                <span className="text-content">{element.text}</span>
+                {editingTextId === element.id && !presenting ? (
+                  <textarea
+                    ref={inlineEditorRef}
+                    className="text-inline-editor"
+                    aria-label={`Modifier directement le texte : ${element.text}`}
+                    value={textDraft}
+                    maxLength={2000}
+                    onChange={(event) => {
+                      setTextDraft(event.target.value)
+                      onUpdateText?.(element.id, { text: event.target.value })
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
+                    onDoubleClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => {
+                      event.stopPropagation()
+                      if (
+                        event.key === 'Escape' ||
+                        (event.key === 'Enter' &&
+                          (event.ctrlKey || event.metaKey))
+                      ) {
+                        event.preventDefault()
+                        setEditingTextId(null)
+                      }
+                    }}
+                    onBlur={() => setEditingTextId(null)}
+                  />
+                ) : (
+                  <span className="text-content">{element.text}</span>
+                )}
                 {selectedTextId === element.id &&
                   !presenting &&
                   onUpdateText && (

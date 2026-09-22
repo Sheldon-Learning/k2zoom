@@ -607,6 +607,11 @@ input:focus-visible {
 .slide-number-menu-heading strong {
   color: var(--accent);
 }
+.slide-number-menu p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
 .slide-number-menu button {
   min-height: 36px;
   border: 1px solid var(--line);
@@ -644,6 +649,30 @@ input:focus-visible {
 .text-content {
   display: block;
   width: 100%;
+}
+.text-inline-editor {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  text-shadow: inherit;
+  -webkit-text-stroke: inherit;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+  touch-action: auto;
+  user-select: text;
 }
 .text-effect-video {
   line-height: 1.02;

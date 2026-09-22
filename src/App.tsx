@@ -623,6 +623,15 @@ export default function App() {
     else setNumberMenuFrameId(id)
   }
 
+  function handleSlideNumberDoubleClick(id: string) {
+    if (childrenOf(presentation, id).length) {
+      setNumberMenuFrameId(null)
+      exploreSlide(id)
+    } else {
+      setNumberMenuFrameId(id)
+    }
+  }
+
   function navigateSibling(delta: number) {
     const next = activeSiblings[activeSiblingIndex + delta]
     if (next) focusSlide(next.id)
@@ -1299,6 +1308,7 @@ export default function App() {
           onSelectImage={!cleanMode ? selectImage : undefined}
           onUpdateImage={!cleanMode ? updateImageById : undefined}
           onExploreSlide={handleSlideNumberClick}
+          onDoubleClickSlideNumber={handleSlideNumberDoubleClick}
         />
       </main>
       {!presenting && numberMenuFrame && (
@@ -1320,6 +1330,9 @@ export default function App() {
               ×
             </button>
           </div>
+          {childrenOf(presentation, numberMenuFrame.id).length === 0 && (
+            <p>Créer une sous-présentation pour cette slide ?</p>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -1327,7 +1340,9 @@ export default function App() {
               setNumberMenuFrameId(null)
             }}
           >
-            + Ajouter une sous-slide
+            {childrenOf(presentation, numberMenuFrame.id).length
+              ? '+ Ajouter une sous-slide'
+              : '+ Créer une sous-présentation'}
           </button>
           {childrenOf(presentation, numberMenuFrame.id).length > 0 && (
             <button

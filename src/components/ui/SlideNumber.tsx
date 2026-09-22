@@ -5,6 +5,7 @@ interface Props {
   title: string
   childCount: number
   onExplore?: () => void
+  onDoubleClick?: () => void
   actionLabel?: string
   showAddIndicator?: boolean
   className?: string
@@ -16,6 +17,7 @@ export function SlideNumber({
   title,
   childCount,
   onExplore,
+  onDoubleClick,
   actionLabel,
   showAddIndicator,
   className,
@@ -30,6 +32,10 @@ export function SlideNumber({
       onClick={(event) => {
         event.stopPropagation()
         onExplore?.()
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation()
+        onDoubleClick?.()
       }}
       onPointerDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
