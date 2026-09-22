@@ -387,7 +387,7 @@ export default function App() {
         )
       if (!element || !event.clipboardData) return
       event.clipboardData.setData(
-        'application/x-zoomet-element',
+        'application/x-kzoom-element',
         JSON.stringify(element),
       )
       if (element.type === 'text')
@@ -421,6 +421,7 @@ export default function App() {
         .filter((file): file is File => file !== null)
       if (!files.length) {
         const copied =
+          event.clipboardData?.getData('application/x-kzoom-element') ||
           event.clipboardData?.getData('application/x-zoomet-element') ||
           event.clipboardData?.getData('application/x-zoomet-image')
         if (!copied) return
@@ -1018,7 +1019,7 @@ export default function App() {
                 <span />
               </span>
               <span>
-                zoomet<span className="brand-dot">.</span>
+                kzoom<span className="brand-dot">.</span>
               </span>
             </button>
             <div className="topbar-divider" />
@@ -1262,7 +1263,7 @@ export default function App() {
                   <strong>Explore the canvas.</strong>
                 </span>
               </div>
-              <span className="sidebar-version">ZOOMET / EARLY ACCESS</span>
+              <span className="sidebar-version">KZOOM / EARLY ACCESS</span>
             </div>
           </aside>
           <div className="canvas-top-label">
@@ -1354,7 +1355,7 @@ export default function App() {
             <span />
           </span>
           <span>
-            zoomet<span className="brand-dot">.</span>
+            kzoom<span className="brand-dot">.</span>
           </span>
         </button>
       )}

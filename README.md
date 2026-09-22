@@ -1,6 +1,6 @@
-# Zoomet
+# Kzoom
 
-Zoomet is a spatial presentation prototype. Ideas live on one canvas; a camera travels between named frames to tell the story. The first launch opens a two frame technology startup demo.
+Kzoom is a spatial presentation prototype. Ideas live on one canvas; a camera travels between named frames to tell the story. The first launch opens a two frame technology startup demo.
 
 > Screenshots: add editor and presentation mode images here after the first release.
 
@@ -60,7 +60,7 @@ The static build is written to `dist/`.
 
 Drag the canvas to pan. Use the wheel to zoom toward the cursor; horizontal trackpad scroll or Shift + wheel pans. Click a frame in the sidebar or bottom path to fly there. `0` shows the whole story, `+` and `-` zoom, `P` starts presenting. In presentation mode, use arrow keys or Space to navigate and Escape to exit. The on screen controls also work with touch.
 
-Click the Zoomet logo to hide the top bar, sidebar, and presentation path and expand the canvas. Click the floating Zoomet logo or press Escape to restore the editor panels.
+Click the Kzoom logo to hide the top bar, sidebar, and presentation path and expand the canvas. Click the floating Kzoom logo or press Escape to restore the editor panels.
 
 Use **Texte** in the top bar or **Modifier le texte** in the sidebar to rename the active step, add a text block, or edit its font, size, and position. Click an existing text block on the canvas to edit it directly. Changes are saved with the presentation in local storage and included in JSON exports.
 
@@ -72,7 +72,7 @@ Use **File → Télécharger PDF** to save the full presentation as a landscape 
 
 Click an image in the editor or during a presentation to move the camera closer. Double click the image to return to the previous camera view; on touch, tap the focused image again. With the keyboard, focus an image and press Enter or Space to zoom, then Backspace to return.
 
-Copy an image from another app and press Ctrl+V while the canvas is active to paste it at the center of the current view. You can also select an image in Zoomet, press Ctrl+C, then Ctrl+V to duplicate it. Supported formats are JPG, PNG, and WebP. Drag an image in edit mode to move it, then drag its round handle to rotate it. These changes are saved locally and included in PDF and JSON exports.
+Copy an image from another app and press Ctrl+V while the canvas is active to paste it at the center of the current view. You can also select an image in Kzoom, press Ctrl+C, then Ctrl+V to duplicate it. Supported formats are JPG, PNG, and WebP. Drag an image in edit mode to move it, then drag its round handle to rotate it. These changes are saved locally and included in PDF and JSON exports.
 
 Paste a YouTube watch, share, Shorts, or embed URL through **Ajouter une vidéo**. The new frame appears at the end of the current path, including the Classic story. Select it and press **Lire** on the video card to load the player. Playback is available in both editor and presentation mode; moving to another frame unloads the player. A video must permit embedding on third-party sites to play here.
 

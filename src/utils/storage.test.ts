@@ -1,9 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { demoPresentation } from '../data/demo'
 import { buildVisualPresentation, demoGallery } from '../data/visualStyles'
-import { parsePresentation } from './storage'
+import { loadPresentation, parsePresentation } from './storage'
+
+afterEach(() => vi.unstubAllGlobals())
 
 describe('presentation JSON', () => {
+  it('loads an existing Zoomet document and migrates it to Kzoom', () => {
+    const entries = new Map([
+      ['zoomet.presentation.v1', JSON.stringify(demoPresentation)],
+    ])
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => entries.get(key) ?? null,
+      setItem: (key: string, value: string) => entries.set(key, value),
+    })
+    expect(loadPresentation()).toEqual(demoPresentation)
+    expect(entries.get('kzoom.presentation.v1')).toBe(
+      JSON.stringify(demoPresentation),
+    )
+  })
   it('round trips the presentation and its path', () => {
     expect(parsePresentation(JSON.stringify(demoPresentation))).toEqual(
       demoPresentation,

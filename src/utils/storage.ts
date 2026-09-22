@@ -1,7 +1,8 @@
 import { demoPresentation } from '../data/demo'
 import type { Presentation } from '../types/presentation'
 
-const KEY = 'zoomet.presentation.v1'
+const KEY = 'kzoom.presentation.v1'
+const LEGACY_KEY = 'zoomet.presentation.v1'
 
 export function parsePresentation(json: string): Presentation {
   const parsed: unknown = JSON.parse(json)
@@ -185,8 +186,19 @@ export function parsePresentation(json: string): Presentation {
 
 export function loadPresentation(): Presentation {
   try {
-    const saved = localStorage.getItem(KEY)
-    return saved ? parsePresentation(saved) : demoPresentation
+    const current = localStorage.getItem(KEY)
+    const legacy = current ? null : localStorage.getItem(LEGACY_KEY)
+    const saved = current ?? legacy
+    if (!saved) return demoPresentation
+    const presentation = parsePresentation(saved)
+    if (legacy) {
+      try {
+        localStorage.setItem(KEY, legacy)
+      } catch {
+        // Continue using the valid legacy document if storage is full.
+      }
+    }
+    return presentation
   } catch {
     return demoPresentation
   }

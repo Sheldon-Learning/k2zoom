@@ -399,8 +399,8 @@ export async function createPresentationPdf(
   })
   pdf.setProperties({
     title: presentation.title,
-    subject: 'Présentation Zoomet',
-    author: 'Zoomet',
+    subject: 'Présentation Kzoom',
+    author: 'Kzoom',
   })
   const canvas = document.createElement('canvas')
   canvas.width = PAGE_WIDTH
@@ -480,7 +480,7 @@ export async function createPresentationPdf(
       844,
     )
     context.textAlign = 'right'
-    context.fillText('ZOOMET', PAGE_WIDTH - PAGE_MARGIN, 844)
+    context.fillText('KZOOM', PAGE_WIDTH - PAGE_MARGIN, 844)
     context.textAlign = 'left'
     if (index > 0) pdf.addPage([1280, 720], 'landscape')
     pdf.addImage(
